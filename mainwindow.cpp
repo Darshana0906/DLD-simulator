@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 #include <QPainter>
 #include <QToolBar>
+#include "andgate.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -18,11 +19,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
     QToolBar *toolbar = addToolBar("Gate Toolbar");
 
-    toolbar->addAction("AND");
-    toolbar->addAction("OR");
-    toolbar->addAction("NOT");
-    toolbar->addAction("NAND");
-    toolbar->addAction("NOR");
+    toolbar->addAction(ui->actionAND);
+    toolbar->addAction(ui->actionOR);
+    toolbar->addAction(ui->actionNOT);
+    toolbar->addAction(ui->actionNAND);
+    toolbar->addAction(ui->actionNOR);
+
+    
 }
 
 MainWindow::~MainWindow()

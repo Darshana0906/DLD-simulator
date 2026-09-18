@@ -4,6 +4,8 @@ file(REMOVE_RECURSE
   "DLDSimulator_autogen"
   "CMakeFiles/DLDSimulator.dir/DLDSimulator_autogen/mocs_compilation.cpp.o"
   "CMakeFiles/DLDSimulator.dir/DLDSimulator_autogen/mocs_compilation.cpp.o.d"
+  "CMakeFiles/DLDSimulator.dir/andgate.cpp.o"
+  "CMakeFiles/DLDSimulator.dir/andgate.cpp.o.d"
   "CMakeFiles/DLDSimulator.dir/main.cpp.o"
   "CMakeFiles/DLDSimulator.dir/main.cpp.o.d"
   "CMakeFiles/DLDSimulator.dir/mainwindow.cpp.o"
