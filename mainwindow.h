@@ -13,12 +13,12 @@ class MainWindow : public QMainWindow {
 Q_OBJECT
 
 public:
-MainWindow(QWidget *parent = nullptr);
-~MainWindow();
+    MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
 private:
-Ui::MainWindow *ui;
-QGraphicsScene *scene;
+    Ui::MainWindow *ui;
+    QGraphicsScene *scene;
 };
 
 #endif // MAINWINDOW_H

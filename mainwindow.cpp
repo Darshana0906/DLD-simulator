@@ -15,16 +15,12 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
-    // Create the graphics scene
     scene = new QGraphicsScene(this);
 
-    // Attach the scene to the graphics view
-    ui->graphicsView->setScene(scene);
-
-    // Set the size of our canvas
     scene->setSceneRect(0, 0, 1200, 700);
 
-    // Enable smooth rendering
+    ui->graphicsView->setScene(scene);
+
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
     ui->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 
