@@ -10,7 +10,6 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "" "DLDSimulator_autogen/timestamp" "custom" "DLDSimulator_autogen/deps"
   "/home/darshana-kulkarni/TY Project/DLDSimulator/build/DLDSimulator_autogen/mocs_compilation.cpp" "CMakeFiles/DLDSimulator.dir/DLDSimulator_autogen/mocs_compilation.cpp.o" "gcc" "CMakeFiles/DLDSimulator.dir/DLDSimulator_autogen/mocs_compilation.cpp.o.d"
-  "/home/darshana-kulkarni/TY Project/DLDSimulator/andgate.cpp" "CMakeFiles/DLDSimulator.dir/andgate.cpp.o" "gcc" "CMakeFiles/DLDSimulator.dir/andgate.cpp.o.d"
   "/home/darshana-kulkarni/TY Project/DLDSimulator/main.cpp" "CMakeFiles/DLDSimulator.dir/main.cpp.o" "gcc" "CMakeFiles/DLDSimulator.dir/main.cpp.o.d"
   "/home/darshana-kulkarni/TY Project/DLDSimulator/mainwindow.cpp" "CMakeFiles/DLDSimulator.dir/mainwindow.cpp.o" "gcc" "CMakeFiles/DLDSimulator.dir/mainwindow.cpp.o.d"
   )

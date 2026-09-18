@@ -224,30 +224,6 @@ DLDSimulator_autogen/mocs_compilation.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/DLDSimulator.dir/build.make CMakeFiles/DLDSimulator.dir/DLDSimulator_autogen/mocs_compilation.cpp.s
 .PHONY : DLDSimulator_autogen/mocs_compilation.cpp.s
 
-andgate.o: andgate.cpp.o
-.PHONY : andgate.o
-
-# target to build an object file
-andgate.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DLDSimulator.dir/build.make CMakeFiles/DLDSimulator.dir/andgate.cpp.o
-.PHONY : andgate.cpp.o
-
-andgate.i: andgate.cpp.i
-.PHONY : andgate.i
-
-# target to preprocess a source file
-andgate.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DLDSimulator.dir/build.make CMakeFiles/DLDSimulator.dir/andgate.cpp.i
-.PHONY : andgate.cpp.i
-
-andgate.s: andgate.cpp.s
-.PHONY : andgate.s
-
-# target to generate assembly for a file
-andgate.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/DLDSimulator.dir/build.make CMakeFiles/DLDSimulator.dir/andgate.cpp.s
-.PHONY : andgate.cpp.s
-
 main.o: main.cpp.o
 .PHONY : main.o
 
@@ -314,9 +290,6 @@ help:
 	@echo "... DLDSimulator_autogen/mocs_compilation.o"
 	@echo "... DLDSimulator_autogen/mocs_compilation.i"
 	@echo "... DLDSimulator_autogen/mocs_compilation.s"
-	@echo "... andgate.o"
-	@echo "... andgate.i"
-	@echo "... andgate.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"

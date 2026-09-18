@@ -2,7 +2,7 @@
 #include "./ui_mainwindow.h"
 #include <QPainter>
 #include <QToolBar>
-#include "andgate.h"
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)

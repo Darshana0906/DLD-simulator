@@ -205,12 +205,6 @@
 	"HEADERS" : 
 	[
 		[
-			"/home/darshana-kulkarni/TY Project/DLDSimulator/andgate.h",
-			"MU",
-			"EWIEGA46WW/moc_andgate.cpp",
-			null
-		],
-		[
 			"/home/darshana-kulkarni/TY Project/DLDSimulator/mainwindow.h",
 			"MU",
 			"EWIEGA46WW/moc_mainwindow.cpp",
@@ -275,11 +269,6 @@
 	"SETTINGS_FILE" : "/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/DLDSimulator_autogen.dir/AutogenUsed.txt",
 	"SOURCES" : 
 	[
-		[
-			"/home/darshana-kulkarni/TY Project/DLDSimulator/andgate.cpp",
-			"MU",
-			null
-		],
 		[
 			"/home/darshana-kulkarni/TY Project/DLDSimulator/main.cpp",
 			"MU",

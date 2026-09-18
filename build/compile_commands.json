@@ -16,11 +16,5 @@
   "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I\"/home/darshana-kulkarni/TY Project/DLDSimulator/build/DLDSimulator_autogen/include\" -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore -isystem /usr/include/x86_64-linux-gnu/qt6 -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui -std=gnu++17 -fPIC -o CMakeFiles/DLDSimulator.dir/mainwindow.cpp.o -c \"/home/darshana-kulkarni/TY Project/DLDSimulator/mainwindow.cpp\"",
   "file": "/home/darshana-kulkarni/TY Project/DLDSimulator/mainwindow.cpp",
   "output": "CMakeFiles/DLDSimulator.dir/mainwindow.cpp.o"
-},
-{
-  "directory": "/home/darshana-kulkarni/TY Project/DLDSimulator/build",
-  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I\"/home/darshana-kulkarni/TY Project/DLDSimulator/build/DLDSimulator_autogen/include\" -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore -isystem /usr/include/x86_64-linux-gnu/qt6 -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui -std=gnu++17 -fPIC -o CMakeFiles/DLDSimulator.dir/andgate.cpp.o -c \"/home/darshana-kulkarni/TY Project/DLDSimulator/andgate.cpp\"",
-  "file": "/home/darshana-kulkarni/TY Project/DLDSimulator/andgate.cpp",
-  "output": "CMakeFiles/DLDSimulator.dir/andgate.cpp.o"
 }
 ]
