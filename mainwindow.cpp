@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include <QPainter>
+#include <QToolBar>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -7,17 +9,20 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    // Create the graphics scene
     scene = new QGraphicsScene(this);
 
-    // Attach the scene to the graphics view
-    ui->graphicsView->setScene(scene);
-
-    // Set the size of our canvas
     scene->setSceneRect(0, 0, 1200, 700);
 
-    // Enable smooth rendering
+    ui->graphicsView->setScene(scene);
+
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
+    QToolBar *toolbar = addToolBar("Gate Toolbar");
+
+    toolbar->addAction("AND");
+    toolbar->addAction("OR");
+    toolbar->addAction("NOT");
+    toolbar->addAction("NAND");
+    toolbar->addAction("NOR");
 }
 
 MainWindow::~MainWindow()
