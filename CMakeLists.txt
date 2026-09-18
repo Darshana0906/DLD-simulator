@@ -17,7 +17,22 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
-      
+        gates/Gate.cpp
+        gates/Gate.h
+        gates/AndGate.cpp
+        gates/AndGate.h
+        gates/OrGate.h
+        gates/OrGate.cpp
+        gates/NotGate.h
+        gates/NotGate.cpp
+        gates/NandGate.h
+        gates/NandGate.cpp
+        gates/NorGate.h
+        gates/NorGate.cpp
+        gates/XorGate.h
+        gates/XorGate.cpp
+        gates/XnorGate.h
+        gates/XnorGate.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
