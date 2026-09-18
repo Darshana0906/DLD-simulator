@@ -33,6 +33,22 @@ set(PROJECT_SOURCES
         gates/XorGate.cpp
         gates/XnorGate.h
         gates/XnorGate.cpp
+
+        elements/Point.cpp
+        elements/Point.h
+        elements/Wire.h
+        elements/Wire.cpp
+        elements/LED.h
+        elements/LED.cpp
+        elements/Input.h
+        elements/Input.cpp
+        elements/GND.h
+        elements/GND.cpp
+        elements/Const1.h
+        elements/Const1.cpp
+        elements/Switch.h
+        elements/Switch.cpp
+
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)

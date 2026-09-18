@@ -1,9 +1,0 @@
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/DLDSimulator.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/edit_cache.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/rebuild_cache.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/list_install_components.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/install.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/install/local.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/install/strip.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/DLDSimulator_autogen_timestamp_deps.dir
-/home/darshana-kulkarni/TY Project/DLDSimulator/build/CMakeFiles/DLDSimulator_autogen.dir
