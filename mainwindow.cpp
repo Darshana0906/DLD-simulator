@@ -4,13 +4,15 @@
 #include "gates/OrGate.h"
 #include "gates/NotGate.h"
 #include "gates/NandGate.h"
+#include "gates/NorGate.h"
+#include "gates/XorGate.h"
+#include "gates/XnorGate.h"
 #include <QToolBar>
 #include <QAction>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-{
+    , ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
     // Create the graphics scene
@@ -33,6 +35,9 @@ MainWindow::MainWindow(QWidget *parent)
     QAction *orAction = toolbar->addAction("OR");
     QAction *notAction = toolbar->addAction("NOT");
     QAction *nandAction = toolbar->addAction("NAND");
+    QAction *norAction = toolbar->addAction("NOR");
+    QAction *xorAction = toolbar->addAction("XOR");
+    QAction *xnorAction = toolbar->addAction("XNOR");
 
     //connections
     connect(andAction, &QAction::triggered, this, [this]() {
@@ -54,10 +59,24 @@ MainWindow::MainWindow(QWidget *parent)
     NandGate *gate = new NandGate();
     gate->setPos(300, 200);
     scene->addItem(gate);});
+
+    connect(norAction, &QAction::triggered, this, [this]() {
+    NorGate *gate = new NorGate();
+    gate->setPos(300, 200);
+    scene->addItem(gate);});
+
+    connect(xorAction, &QAction::triggered, this, [this]() {
+    XorGate *gate = new XorGate();
+    gate->setPos(300, 200);
+    scene->addItem(gate);});
+
+    connect(xnorAction, &QAction::triggered, this, [this]() {
+    XnorGate *gate = new XnorGate();
+    gate->setPos(300, 200);
+    scene->addItem(gate);});
     
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
 }

@@ -1,10 +1,10 @@
-#ifndef NANDGATE_H
-#define NANDGATE_H
+#ifndef NORGATE_H
+#define NORGATE_H
 #include "Gate.h"
 
-class NandGate : public Gate {
+class NorGate : public Gate {
 public:
-    NandGate(QGraphicsItem *parent = nullptr);
+    NorGate(QGraphicsItem *parent = nullptr);
 
 protected:
     QPainterPath getPath() const override;
