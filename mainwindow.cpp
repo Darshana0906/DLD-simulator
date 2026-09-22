@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "ZoomGraphicsView.h"
 #include "CircuitScene.h"
 #include "gates/AndGate.h"
 #include "gates/OrGate.h"
@@ -34,6 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     scene->setSceneRect(0, 0, 4000, 3000);
 
     ui->graphicsView->setScene(scene);
+    ui->graphicsView->setCircuitScene(scene);
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
     ui->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 
@@ -244,7 +246,7 @@ MainWindow::~MainWindow() {
 void MainWindow::setPlacementTool(ElementType type, const QString &elementName) {
     currentTool = type;
     scene->setPlacementMode(true);
-    ui->graphicsView->setCursor(Qt::CrossCursor);
+    ui->graphicsView->applyCursor();   // enforce CrossCursor via single path
     statusBar()->showMessage(QString("Click on the canvas to place %1 (Right-click or Esc to cancel)").arg(elementName));
 }
 
@@ -258,7 +260,7 @@ void MainWindow::onSceneClicked(const QPointF &pos) {
 void MainWindow::cancelPlacement() {
     currentTool = ElementType::None;
     scene->setPlacementMode(false);
-    ui->graphicsView->setCursor(Qt::ArrowCursor);
+    ui->graphicsView->applyCursor();   // restore ArrowCursor via single path
     statusBar()->clearMessage();
 }
 

@@ -1,5 +1,6 @@
 #include "LED.h"
 #include "Point.h"
+#include "../CircuitScene.h"
 
 #include <QPainter>
 
@@ -16,7 +17,7 @@ Point* LED::getInputPoint() const {
 }
 
 QRectF LED::boundingRect() const {
-    return QRectF(0, 0, 50, 50);
+    return QRectF(-15, 0, 65, 50);
 }
 
 void LED::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
@@ -28,4 +29,13 @@ void LED::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) 
         painter->setBrush(Qt::white);
     painter->drawEllipse(10, 10, 30, 30);
     painter->drawLine(0, 25, 10, 25);
+}
+
+void LED::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    CircuitScene *cs = dynamic_cast<CircuitScene *>(scene());
+    if (cs && cs->isPlacementMode()) {
+        event->ignore();
+        return;
+    }
+    QGraphicsItem::mousePressEvent(event);
 }

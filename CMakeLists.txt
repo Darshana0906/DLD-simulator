@@ -18,6 +18,8 @@ set(PROJECT_SOURCES
         mainwindow.ui
         CircuitScene.h
         CircuitScene.cpp
+        SelectionBox.h
+        SelectionBox.cpp
 
         ZoomGraphicsView.cpp
         ZoomGraphicsView.h

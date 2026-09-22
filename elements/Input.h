@@ -2,6 +2,7 @@
 #define INPUT_H
 
 #include <QGraphicsItem>
+#include <QGraphicsSceneMouseEvent>
 
 class Point;
 class Input : public QGraphicsItem {
@@ -16,6 +17,7 @@ protected:
     Point *outputPoint;
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
 #endif
