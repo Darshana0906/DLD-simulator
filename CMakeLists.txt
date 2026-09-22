@@ -50,6 +50,9 @@ set(PROJECT_SOURCES
         elements/Const1.cpp
         elements/Switch.h
         elements/Switch.cpp
+
+        resources.qrc
+
 )
 
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)
