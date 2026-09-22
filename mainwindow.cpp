@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include "CircuitScene.h"
 #include "gates/AndGate.h"
 #include "gates/OrGate.h"
 #include "gates/NotGate.h"
@@ -15,6 +16,13 @@
 #include "elements/Switch.h"
 #include <QToolBar>
 #include <QAction>
+#include <QToolButton>
+#include <QIcon>
+#include <QSize>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QStatusBar>
+#include <QKeySequence>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -22,111 +30,326 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow) {
     ui->setupUi(this);
 
-    scene = new QGraphicsScene(this);
-
-    scene->setSceneRect(0, 0, 1200, 700);
+    scene = new CircuitScene(this);
+    scene->setSceneRect(0, 0, 4000, 3000);
 
     ui->graphicsView->setScene(scene);
-
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
     ui->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 
-    QToolBar *toolbar = new QToolBar("Gates", this);
+    // Ensure graphicsView auto-resizes to fill available space
+    if (!ui->centralwidget->layout()) {
+        QVBoxLayout *layout = new QVBoxLayout(ui->centralwidget);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+        layout->addWidget(ui->graphicsView);
+    }
+
+    // Connect CircuitScene signals for click-to-place
+    connect(scene, &CircuitScene::sceneClicked, this, &MainWindow::onSceneClicked);
+    connect(scene, &CircuitScene::placementCancelled, this, &MainWindow::cancelPlacement);
+
+    // Fullscreen shortcut (F11)
+    QAction *fullScreenAction = new QAction(this);
+    fullScreenAction->setShortcut(QKeySequence(Qt::Key_F11));
+    connect(fullScreenAction, &QAction::triggered, this, &MainWindow::toggleFullScreenMode);
+    addAction(fullScreenAction);
+
+    QToolBar *toolbar = new QToolBar("Toolbar", this);
     addToolBar(Qt::LeftToolBarArea, toolbar);
+    toolbar->setIconSize(QSize(96, 64));
+    
+    //gates
+    QFont font;
+    font.setPointSize(12);
 
-    QAction *andAction = toolbar->addAction("AND");
-    QAction *orAction = toolbar->addAction("OR");
-    QAction *notAction = toolbar->addAction("NOT");
-    QAction *nandAction = toolbar->addAction("NAND");
-    QAction *norAction = toolbar->addAction("NOR");
-    QAction *xorAction = toolbar->addAction("XOR");
-    QAction *xnorAction = toolbar->addAction("XNOR");
 
-    QAction *pointAction = toolbar->addAction("Point");
-    QAction *wireAction = toolbar->addAction("Wire");
-    QAction *ledAction = toolbar->addAction("LED");
-    QAction *gndAction = toolbar->addAction("GND");
-    QAction *constantAction = toolbar->addAction("1");
-    QAction *switchAction = toolbar->addAction("Switch");
+    QLabel *gatelabel = new QLabel("GATES");
+    gatelabel->setAlignment(Qt :: AlignCenter);
+    toolbar->addWidget(gatelabel);
+    gatelabel->setFont(font);
+    gatelabel->setStyleSheet("background-color: lightgray;");
+
+    QAction *andAction = new QAction(this);
+    andAction->setIcon(QIcon(":/icons/ANDgate.png"));
+    QToolButton *andButton = new QToolButton();
+    andButton->setDefaultAction(andAction);
+    andButton->setToolTip("AND Gate");
+    andButton->setFixedSize(96, 64);
+    toolbar->addWidget(andButton);
+
+    QAction *orAction = new QAction(this);
+    orAction->setIcon(QIcon(":/icons/ORgate.png"));
+    QToolButton *orButton = new QToolButton();
+    orButton->setDefaultAction(orAction);
+    orButton->setToolTip("OR Gate");
+    orButton->setFixedSize(96, 64);
+    toolbar->addWidget(orButton);
+
+    QAction *notAction = new QAction(this);
+    notAction->setIcon(QIcon(":/icons/NOTgate.png"));
+    QToolButton *notButton = new QToolButton();
+    notButton->setDefaultAction(notAction);
+    notButton->setToolTip("NOT Gate");
+    notButton->setFixedSize(96, 64);
+    toolbar->addWidget(notButton);
+
+    QAction *nandAction = new QAction(this);
+    nandAction->setIcon(QIcon(":/icons/NANDgate.png"));
+    QToolButton *nandButton = new QToolButton();
+    nandButton->setDefaultAction(nandAction);
+    nandButton->setToolTip("NAND Gate");
+    nandButton->setFixedSize(96, 64);
+    toolbar->addWidget(nandButton);
+
+    QAction *norAction = new QAction(this);
+    norAction->setIcon(QIcon(":/icons/NORgate.png"));
+    QToolButton *norButton = new QToolButton();
+    norButton->setDefaultAction(norAction);
+    norButton->setToolTip("NOR Gate");
+    norButton->setFixedSize(96, 64);
+    toolbar->addWidget(norButton);
+
+    QAction *xorAction = new QAction(this);
+    xorAction->setIcon(QIcon(":/icons/XORgate.png"));
+    QToolButton *xorButton = new QToolButton();
+    xorButton->setDefaultAction(xorAction);
+    xorButton->setToolTip("XOR Gate");
+    xorButton->setFixedSize(96, 64);
+    toolbar->addWidget(xorButton);
+
+    QAction *xnorAction = new QAction(this);
+    xnorAction->setIcon(QIcon(":/icons/XNORgate.png"));
+    QToolButton *xnorButton = new QToolButton();
+    xnorButton->setDefaultAction(xnorAction);
+    xnorButton->setToolTip("XNOR Gate");
+    xnorButton->setFixedSize(96, 64);
+    toolbar->addWidget(xnorButton);
+
+    //QAction *pointAction = toolbar->addAction("Point");
+    QLabel *connectionlabel = new QLabel("CONNECTION");
+    connectionlabel->setAlignment(Qt :: AlignCenter);
+    toolbar->addWidget(connectionlabel);
+    connectionlabel->setFont(font);
+    connectionlabel->setStyleSheet("background-color: lightgray;");
+
+    QAction *wireAction = new QAction(this);
+    wireAction->setIcon(QIcon(":/icons/WIRE.png"));
+    QToolButton *wireButton = new QToolButton();
+    wireButton->setDefaultAction(wireAction);
+    wireButton->setToolTip("WIRE");
+    wireButton->setFixedSize(96, 64);
+    toolbar->addWidget(wireButton);
+    
+
+    QLabel *inputlabel = new QLabel("INPUT");
+    inputlabel->setAlignment(Qt :: AlignCenter);
+    toolbar->addWidget(inputlabel);
+    inputlabel->setFont(font);
+    inputlabel->setStyleSheet("background-color: lightgray;");
+
+    QAction *gndAction = new QAction(this);
+    gndAction->setIcon(QIcon(":/icons/GNDip.png"));
+    QToolButton *gndButton = new QToolButton();
+    gndButton->setDefaultAction(gndAction);
+    gndButton->setToolTip("GND");
+    gndButton->setFixedSize(96, 64);
+    toolbar->addWidget(gndButton);
+
+    QAction *constantAction = new QAction(this);
+    constantAction->setIcon(QIcon(":/icons/CONST1ip.png"));
+    QToolButton *constantButton = new QToolButton();
+    constantButton->setDefaultAction(constantAction);
+    constantButton->setToolTip("CONSTANT 1");
+    constantButton->setFixedSize(96, 64);
+    toolbar->addWidget(constantButton);
+
+    QAction *switchAction = new QAction(this);
+    switchAction->setIcon(QIcon(":/icons/SWITCHip.png"));
+    QToolButton *switchButton = new QToolButton();
+    switchButton->setDefaultAction(switchAction);
+    switchButton->setToolTip("SWITCH");
+    switchButton->setFixedSize(96, 64);
+    toolbar->addWidget(switchButton);
         
+    QLabel *outputlabel = new QLabel("OUTPUT");
+    outputlabel->setAlignment(Qt :: AlignCenter);
+    toolbar->addWidget(outputlabel);
+    outputlabel->setFont(font);
+    outputlabel->setStyleSheet("background-color: lightgray;");
 
+    QAction *ledAction = new QAction(this);
+    ledAction->setIcon(QIcon(":/icons/LEDop.png"));
+    QToolButton *ledButton = new QToolButton();
+    ledButton->setDefaultAction(ledAction);
+    ledButton->setToolTip("LED");
+    ledButton->setFixedSize(96, 64);
+    toolbar->addWidget(ledButton);
 
 
     //connections
     connect(andAction, &QAction::triggered, this, [this]() {
-    AndGate *gate = new AndGate();
-    gate->setPos(300, 200);
-    scene->addItem(gate);});
+        setPlacementTool(ElementType::AndGate, "AND Gate");
+    });
 
     connect(orAction, &QAction::triggered, this, [this]() {
-    OrGate *gate = new OrGate();
-    gate->setPos(300, 200);
-    scene->addItem(gate);});
+        setPlacementTool(ElementType::OrGate, "OR Gate");
+    });
 
     connect(notAction, &QAction::triggered, this, [this]() {
-    NotGate *gate = new NotGate();
-    gate->setPos(300, 200);
-    scene->addItem(gate);});
+        setPlacementTool(ElementType::NotGate, "NOT Gate");
+    });
 
     connect(nandAction, &QAction::triggered, this, [this]() {
-    NandGate *gate = new NandGate();
-    gate->setPos(300, 200);
-    scene->addItem(gate);});
+        setPlacementTool(ElementType::NandGate, "NAND Gate");
+    });
 
     connect(norAction, &QAction::triggered, this, [this]() {
-    NorGate *gate = new NorGate();
-    gate->setPos(300, 200);
-    scene->addItem(gate);});
+        setPlacementTool(ElementType::NorGate, "NOR Gate");
+    });
 
     connect(xorAction, &QAction::triggered, this, [this]() {
-    XorGate *gate = new XorGate();
-    gate->setPos(300, 200);
-    scene->addItem(gate);});
+        setPlacementTool(ElementType::XorGate, "XOR Gate");
+    });
 
     connect(xnorAction, &QAction::triggered, this, [this]() {
-    XnorGate *gate = new XnorGate();
-    gate->setPos(300, 200);
-    scene->addItem(gate);});
-
-    connect(pointAction, &QAction::triggered, this, [this]() {
-        Point *point = new Point();
-        point->setPos(300, 200);
-        scene->addItem(point);
+        setPlacementTool(ElementType::XnorGate, "XNOR Gate");
     });
 
     connect(wireAction, &QAction::triggered, this, [this]() {
-        Point *start = new Point();
-        Point *end = new Point();
-        start->setPos(300, 200);
-        end->setPos(500, 200);
-        scene->addItem(start);
-        scene->addItem(end);
-        Wire *wire = new Wire(start, end);
-        scene->addItem(wire);
+        setPlacementTool(ElementType::Wire, "Wire");
     });
+
     connect(ledAction, &QAction::triggered, this, [this]() {
-        LED *led = new LED();
-        led->setPos(300, 200);
-        scene->addItem(led);
+        setPlacementTool(ElementType::LED, "LED");
     });
+
     connect(gndAction, &QAction::triggered, this, [this]() {
-        GND *gnd = new GND();
-        gnd->setPos(300, 200);
-        scene->addItem(gnd);
+        setPlacementTool(ElementType::GND, "GND");
     });
+
     connect(constantAction, &QAction::triggered, this, [this]() {
-        Const1 *constant = new Const1();
-        constant->setPos(300, 200);
-        scene->addItem(constant);
+        setPlacementTool(ElementType::Const1, "Constant 1");
     });
+
     connect(switchAction, &QAction::triggered, this, [this]() {
-        Switch *sw = new Switch();
-        sw->setPos(300, 200);
-        scene->addItem(sw);
+        setPlacementTool(ElementType::Switch, "Switch");
     });
-    
 }
 
 MainWindow::~MainWindow() {
     delete ui;
+}
+
+void MainWindow::setPlacementTool(ElementType type, const QString &elementName) {
+    currentTool = type;
+    scene->setPlacementMode(true);
+    ui->graphicsView->setCursor(Qt::CrossCursor);
+    statusBar()->showMessage(QString("Click on the canvas to place %1 (Right-click or Esc to cancel)").arg(elementName));
+}
+
+void MainWindow::onSceneClicked(const QPointF &pos) {
+    if (currentTool != ElementType::None) {
+        placeElement(currentTool, pos);
+        cancelPlacement();
+    }
+}
+
+void MainWindow::cancelPlacement() {
+    currentTool = ElementType::None;
+    scene->setPlacementMode(false);
+    ui->graphicsView->setCursor(Qt::ArrowCursor);
+    statusBar()->clearMessage();
+}
+
+void MainWindow::toggleFullScreenMode() {
+    if (isFullScreen()) {
+        showMaximized();
+    } else {
+        showFullScreen();
+    }
+}
+
+void MainWindow::placeElement(ElementType type, const QPointF &pos) {
+    switch (type) {
+    case ElementType::AndGate: {
+        AndGate *gate = new AndGate();
+        gate->setPos(pos.x() - 50, pos.y() - 30);
+        scene->addItem(gate);
+        break;
+    }
+    case ElementType::OrGate: {
+        OrGate *gate = new OrGate();
+        gate->setPos(pos.x() - 50, pos.y() - 30);
+        scene->addItem(gate);
+        break;
+    }
+    case ElementType::NotGate: {
+        NotGate *gate = new NotGate();
+        gate->setPos(pos.x() - 40, pos.y() - 30);
+        scene->addItem(gate);
+        break;
+    }
+    case ElementType::NandGate: {
+        NandGate *gate = new NandGate();
+        gate->setPos(pos.x() - 50, pos.y() - 30);
+        scene->addItem(gate);
+        break;
+    }
+    case ElementType::NorGate: {
+        NorGate *gate = new NorGate();
+        gate->setPos(pos.x() - 50, pos.y() - 30);
+        scene->addItem(gate);
+        break;
+    }
+    case ElementType::XorGate: {
+        XorGate *gate = new XorGate();
+        gate->setPos(pos.x() - 50, pos.y() - 30);
+        scene->addItem(gate);
+        break;
+    }
+    case ElementType::XnorGate: {
+        XnorGate *gate = new XnorGate();
+        gate->setPos(pos.x() - 50, pos.y() - 30);
+        scene->addItem(gate);
+        break;
+    }
+    case ElementType::Wire: {
+        Point *start = new Point();
+        Point *end = new Point();
+        start->setPos(pos.x() - 50, pos.y());
+        end->setPos(pos.x() + 50, pos.y());
+        scene->addItem(start);
+        scene->addItem(end);
+        Wire *wire = new Wire(start, end);
+        scene->addItem(wire);
+        break;
+    }
+    case ElementType::LED: {
+        LED *led = new LED();
+        led->setPos(pos.x() - 25, pos.y() - 25);
+        scene->addItem(led);
+        break;
+    }
+    case ElementType::GND: {
+        GND *gnd = new GND();
+        gnd->setPos(pos.x() - 30, pos.y() - 25);
+        scene->addItem(gnd);
+        break;
+    }
+    case ElementType::Const1: {
+        Const1 *constant = new Const1();
+        constant->setPos(pos.x() - 30, pos.y() - 25);
+        scene->addItem(constant);
+        break;
+    }
+    case ElementType::Switch: {
+        Switch *sw = new Switch();
+        sw->setPos(pos.x() - 30, pos.y() - 25);
+        scene->addItem(sw);
+        break;
+    }
+    default:
+        break;
+    }
 }

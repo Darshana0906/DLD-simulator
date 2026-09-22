@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/">
+        
+        <file>icons/ANDgate.png</file>
+        <file>icons/ORgate.png</file>
+        <file>icons/NOTgate.png</file>
+        <file>icons/NANDgate.png</file>
+        <file>icons/NORgate.png</file>
+        <file>icons/XORgate.png</file>
+        <file>icons/XNORgate.png</file>
+
+        <file>icons/WIRE.png</file>
+
+        <file>icons/GNDip.png</file>
+        <file>icons/CONST1ip.png</file>
+        <file>icons/SWITCHip.png</file>
+        
+        <file>icons/LEDop.png</file>
+    </qresource>
+</RCC>

@@ -16,6 +16,8 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+        CircuitScene.h
+        CircuitScene.cpp
 
         ZoomGraphicsView.cpp
         ZoomGraphicsView.h
@@ -53,6 +55,9 @@ set(PROJECT_SOURCES
         elements/Const1.cpp
         elements/Switch.h
         elements/Switch.cpp
+
+        resources.qrc
+
 )
 
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)
