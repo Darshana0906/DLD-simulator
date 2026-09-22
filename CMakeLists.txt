@@ -17,6 +17,9 @@ set(PROJECT_SOURCES
         mainwindow.h
         mainwindow.ui
 
+        ZoomGraphicsView.cpp
+        ZoomGraphicsView.h
+
         overlapping.cpp
 
         gates/Gate.cpp
@@ -64,10 +67,14 @@ else()
         )
     else()
         add_executable(DLDSimulator
-            ${PROJECT_SOURCES
+            ${PROJECT_SOURCES}
         )
     endif()
 endif()
+
+target_include_directories(DLDSimulator PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 target_link_libraries(DLDSimulator PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
