@@ -19,6 +19,9 @@ set(PROJECT_SOURCES
         CircuitScene.h
         CircuitScene.cpp
 
+        ZoomGraphicsView.cpp
+        ZoomGraphicsView.h
+
         overlapping.cpp
 
         gates/Gate.cpp
@@ -73,6 +76,10 @@ else()
         )
     endif()
 endif()
+
+target_include_directories(DLDSimulator PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 target_link_libraries(DLDSimulator PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
