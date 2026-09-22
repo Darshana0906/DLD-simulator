@@ -16,6 +16,8 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+        CircuitScene.h
+        CircuitScene.cpp
 
         overlapping.cpp
 
@@ -67,7 +69,7 @@ else()
         )
     else()
         add_executable(DLDSimulator
-            ${PROJECT_SOURCES
+            ${PROJECT_SOURCES}
         )
     endif()
 endif()
