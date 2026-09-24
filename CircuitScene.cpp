@@ -115,15 +115,23 @@ void CircuitScene::keyPressEvent(QKeyEvent *event) {
 void CircuitScene::drawBackground(QPainter *painter, const QRectF &rect) {
     QGraphicsScene::drawBackground(painter, rect);
 
-    // Draw subtle grid dots every 20 pixels
+    // Draw subtle grid dots every 20 pixels — batched for performance
     const int gridSize = 20;
     qreal left = int(rect.left()) - (int(rect.left()) % gridSize);
     qreal top = int(rect.top()) - (int(rect.top()) % gridSize);
 
-    painter->setPen(QPen(QColor(210, 215, 222), 1));
+    QVector<QPointF> points;
+    // Pre-allocate to avoid repeated heap allocations inside the loop
+    int cols = int((rect.right() - left) / gridSize) + 1;
+    int rows = int((rect.bottom() - top) / gridSize) + 1;
+    points.reserve(cols * rows);
+
     for (qreal x = left; x < rect.right(); x += gridSize) {
         for (qreal y = top; y < rect.bottom(); y += gridSize) {
-            painter->drawPoint(QPointF(x, y));
+            points.append(QPointF(x, y));
         }
     }
+
+    painter->setPen(QPen(QColor(210, 215, 222), 1));
+    painter->drawPoints(points.constData(), points.size());
 }
