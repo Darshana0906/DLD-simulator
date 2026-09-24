@@ -1,8 +1,10 @@
 #include "OrGate.h"
 #include <QPainter>
 
-OrGate::OrGate(QGraphicsItem *parent)
-    :Gate(parent) {
+OrGate::OrGate(QGraphicsItem *parent) : Gate(parent) {
+    addInputPin(-29, 11);
+    addInputPin(-29, 41);
+    setOutputPin(120, 26);
 }
 
 QPainterPath OrGate::getPath() const {
@@ -14,16 +16,12 @@ QPainterPath OrGate::getPath() const {
     path.closeSubpath();
     return path;
 }
-void OrGate::paint(QPainter *painter,
-                   const QStyleOptionGraphicsItem *,
-                   QWidget *) {
+
+void OrGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->setPen(Qt::black);
     painter->setBrush(Qt::white);
     painter->drawPath(getPath());
     painter->drawLine(-20, 15, 14, 15);
     painter->drawLine(-20, 45, 13, 45);
     painter->drawLine(100, 30, 120, 30);
-    painter->drawEllipse(-29, 11, 8, 8);
-    painter->drawEllipse(-29, 41, 8, 8);
-    painter->drawEllipse(120, 26, 8, 8);
 }

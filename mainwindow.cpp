@@ -246,13 +246,20 @@ MainWindow::~MainWindow() {
 
 void MainWindow::setPlacementTool(ElementType type, const QString &elementName) {
     currentTool = type;
-    scene->setPlacementMode(true);
-    ui->graphicsView->applyCursor();   // enforce CrossCursor via single path
-    statusBar()->showMessage(QString("Click on the canvas to place %1 (Right-click or Esc to cancel)").arg(elementName));
+    if (type == ElementType::Wire) {
+        scene->setWireToolActive(true);
+        scene->setPlacementMode(false);
+        statusBar()->showMessage("Wire Tool: Click a start pin, then click a target pin (Right-click or Esc to cancel)");
+    } else {
+        scene->setWireToolActive(false);
+        scene->setPlacementMode(true);
+        statusBar()->showMessage(QString("Click on the canvas to place %1 (Right-click or Esc to cancel)").arg(elementName));
+    }
+    ui->graphicsView->applyCursor();
 }
 
 void MainWindow::onSceneClicked(const QPointF &pos) {
-    if (currentTool != ElementType::None) {
+    if (currentTool != ElementType::None && currentTool != ElementType::Wire) {
         placeElement(currentTool, pos);
         cancelPlacement();
     }
@@ -260,8 +267,9 @@ void MainWindow::onSceneClicked(const QPointF &pos) {
 
 void MainWindow::cancelPlacement() {
     currentTool = ElementType::None;
+    scene->setWireToolActive(false);
     scene->setPlacementMode(false);
-    ui->graphicsView->applyCursor();   // restore ArrowCursor via single path
+    ui->graphicsView->applyCursor();
     statusBar()->clearMessage();
 }
 
