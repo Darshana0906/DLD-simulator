@@ -37,7 +37,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->setScene(scene);
     ui->graphicsView->setCircuitScene(scene);
     ui->graphicsView->setRenderHint(QPainter::Antialiasing);
-    ui->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
+    ui->graphicsView->setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
+    ui->graphicsView->setCacheMode(QGraphicsView::CacheBackground);
 
     // Ensure graphicsView auto-resizes to fill available space
     if (!ui->centralwidget->layout()) {
