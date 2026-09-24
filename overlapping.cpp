@@ -1,23 +1,34 @@
 #include "overlapping.h"
 #include "elements/Point.h"
 #include "elements/Wire.h"
+#include "SelectionBox.h"
 #include <QGraphicsScene>
 
-bool canMoveItem(QGraphicsItem *movingItem, const QRectF &newRect){
-    if (dynamic_cast<Point *>(movingItem))
+static bool canOverlap(QGraphicsItem *candidate, const QRectF &newRect, QGraphicsScene *scene) {
+    if (!candidate || dynamic_cast<Point *>(candidate))
         return true;
-    if (!movingItem->scene())
+    if (!scene)
         return true;
 
-    for (QGraphicsItem *item : movingItem->scene()->items()) {
-        if (item == movingItem)
+    for (QGraphicsItem *item : scene->items()) {
+        if (item == candidate)
+            continue;
+        if (dynamic_cast<SelectionBox *>(item))
             continue;
         if (dynamic_cast<Point *>(item))
             continue;
-        if (dynamic_cast<Wire *>(movingItem) && dynamic_cast<Wire *>(item))
+        if (dynamic_cast<Wire *>(candidate) && dynamic_cast<Wire *>(item))
             continue;
         if (newRect.intersects(item->sceneBoundingRect()))
             return false;
     }
     return true;
+}
+
+bool canMoveItem(QGraphicsItem *movingItem, const QRectF &newRect) {
+    return canOverlap(movingItem, newRect, movingItem ? movingItem->scene() : nullptr);
+}
+
+bool canPlaceItem(QGraphicsItem *candidate, const QRectF &newRect, QGraphicsScene *scene) {
+    return canOverlap(candidate, newRect, scene);
 }

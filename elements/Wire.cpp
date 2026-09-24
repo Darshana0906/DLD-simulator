@@ -1,10 +1,23 @@
 #include "Wire.h"
 #include "Point.h"
+#include "../overlapping.h"
 #include <QPainter>
 
 Wire::Wire(Point *start, Point *end, QGraphicsItem *parent) : QGraphicsItem(parent), startPoint(start), endPoint(end) {
     setFlag(QGraphicsItem::ItemIsSelectable);
     setFlag(QGraphicsItem::ItemIsMovable);
+    setFlag(QGraphicsItem::ItemSendsGeometryChanges);
+}
+
+QVariant Wire::itemChange(GraphicsItemChange change, const QVariant &value) {
+    if (change == QGraphicsItem::ItemPositionChange && scene()) {
+        const QPointF delta = parentItem()
+            ? parentItem()->mapToScene(value.toPointF()) - parentItem()->mapToScene(pos())
+            : value.toPointF() - pos();
+        if (!canMoveItem(this, sceneBoundingRect().translated(delta)))
+            return pos();
+    }
+    return QGraphicsItem::itemChange(change, value);
 }
 
 QRectF Wire::boundingRect() const {

@@ -15,6 +15,7 @@
 #include "elements/GND.h"
 #include "elements/Const1.h"
 #include "elements/Switch.h"
+#include "overlapping.h"
 #include <QToolBar>
 #include <QAction>
 #include <QToolButton>
@@ -274,47 +275,57 @@ void MainWindow::toggleFullScreenMode() {
 }
 
 void MainWindow::placeElement(ElementType type, const QPointF &pos) {
+    auto addIfAllowed = [this](QGraphicsItem *item) {
+        const QRectF proposedRect = item->mapRectToScene(item->boundingRect());
+        if (canPlaceItem(item, proposedRect, scene)) {
+            scene->addItem(item);
+            return true;
+        }
+        delete item;
+        return false;
+    };
+
     switch (type) {
     case ElementType::AndGate: {
         AndGate *gate = new AndGate();
         gate->setPos(pos.x() - 50, pos.y() - 30);
-        scene->addItem(gate);
+        addIfAllowed(gate);
         break;
     }
     case ElementType::OrGate: {
         OrGate *gate = new OrGate();
         gate->setPos(pos.x() - 50, pos.y() - 30);
-        scene->addItem(gate);
+        addIfAllowed(gate);
         break;
     }
     case ElementType::NotGate: {
         NotGate *gate = new NotGate();
         gate->setPos(pos.x() - 40, pos.y() - 30);
-        scene->addItem(gate);
+        addIfAllowed(gate);
         break;
     }
     case ElementType::NandGate: {
         NandGate *gate = new NandGate();
         gate->setPos(pos.x() - 50, pos.y() - 30);
-        scene->addItem(gate);
+        addIfAllowed(gate);
         break;
     }
     case ElementType::NorGate: {
         NorGate *gate = new NorGate();
         gate->setPos(pos.x() - 50, pos.y() - 30);
-        scene->addItem(gate);
+        addIfAllowed(gate);
         break;
     }
     case ElementType::XorGate: {
         XorGate *gate = new XorGate();
         gate->setPos(pos.x() - 50, pos.y() - 30);
-        scene->addItem(gate);
+        addIfAllowed(gate);
         break;
     }
     case ElementType::XnorGate: {
         XnorGate *gate = new XnorGate();
         gate->setPos(pos.x() - 50, pos.y() - 30);
-        scene->addItem(gate);
+        addIfAllowed(gate);
         break;
     }
     case ElementType::Wire: {
@@ -322,34 +333,38 @@ void MainWindow::placeElement(ElementType type, const QPointF &pos) {
         Point *end = new Point();
         start->setPos(pos.x() - 50, pos.y());
         end->setPos(pos.x() + 50, pos.y());
-        scene->addItem(start);
-        scene->addItem(end);
         Wire *wire = new Wire(start, end);
-        scene->addItem(wire);
+        if (addIfAllowed(wire)) {
+            scene->addItem(start);
+            scene->addItem(end);
+        } else {
+            delete start;
+            delete end;
+        }
         break;
     }
     case ElementType::LED: {
         LED *led = new LED();
         led->setPos(pos.x() - 25, pos.y() - 25);
-        scene->addItem(led);
+        addIfAllowed(led);
         break;
     }
     case ElementType::GND: {
         GND *gnd = new GND();
         gnd->setPos(pos.x() - 30, pos.y() - 25);
-        scene->addItem(gnd);
+        addIfAllowed(gnd);
         break;
     }
     case ElementType::Const1: {
         Const1 *constant = new Const1();
         constant->setPos(pos.x() - 30, pos.y() - 25);
-        scene->addItem(constant);
+        addIfAllowed(constant);
         break;
     }
     case ElementType::Switch: {
         Switch *sw = new Switch();
         sw->setPos(pos.x() - 30, pos.y() - 25);
-        scene->addItem(sw);
+        addIfAllowed(sw);
         break;
     }
     default:

@@ -1,4 +1,5 @@
 #include "SelectionBox.h"
+#include "overlapping.h"
 #include <QPainter>
 #include <QPen>
 #include <QBrush>
@@ -116,6 +117,17 @@ void SelectionBox::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 
         // Strictly preserve aspect ratio by scaling uniformly
         qreal newScale = qBound(0.4, m_initialScale * factor, 3.5);
+        const qreal oldScale = qMax<qreal>(m_targetItem->scale(), 0.001);
+        const QPointF center = m_targetItem->mapToScene(m_targetItem->transformOriginPoint());
+        const QRectF currentRect = m_targetItem->sceneBoundingRect();
+        const qreal ratio = newScale / oldScale;
+        const QPointF halfSize(currentRect.width() * ratio / 2.0,
+                               currentRect.height() * ratio / 2.0);
+        const QRectF proposedRect(center - halfSize, center + halfSize);
+        if (!canMoveItem(m_targetItem, proposedRect)) {
+            event->accept();
+            return;
+        }
         m_targetItem->setScale(newScale);
 
         prepareGeometryChange();

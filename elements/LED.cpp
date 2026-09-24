@@ -1,12 +1,14 @@
 #include "LED.h"
 #include "Point.h"
 #include "../CircuitScene.h"
+#include "../overlapping.h"
 
 #include <QPainter>
 
 LED::LED(QGraphicsItem *parent) : QGraphicsItem(parent) {
     setFlag(QGraphicsItem::ItemIsMovable);
     setFlag(QGraphicsItem::ItemIsSelectable);
+    setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
     inputPoint = new Point(this, false);
     inputPoint->setPos(-10, 20);
@@ -38,4 +40,15 @@ void LED::mousePressEvent(QGraphicsSceneMouseEvent *event) {
         return;
     }
     QGraphicsItem::mousePressEvent(event);
+}
+
+QVariant LED::itemChange(GraphicsItemChange change, const QVariant &value) {
+    if (change == QGraphicsItem::ItemPositionChange && scene()) {
+        const QPointF delta = parentItem()
+            ? parentItem()->mapToScene(value.toPointF()) - parentItem()->mapToScene(pos())
+            : value.toPointF() - pos();
+        if (!canMoveItem(this, sceneBoundingRect().translated(delta)))
+            return pos();
+    }
+    return QGraphicsItem::itemChange(change, value);
 }

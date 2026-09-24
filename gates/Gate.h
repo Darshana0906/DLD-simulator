@@ -13,6 +13,7 @@ protected:
     void paint(QPainter *painter,const QStyleOptionGraphicsItem *option,
  QWidget *widget = nullptr) override;
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
     virtual QPainterPath getPath() const = 0;
 };
