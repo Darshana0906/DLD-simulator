@@ -1,7 +1,10 @@
 #include "NandGate.h"
 #include <QPainter>
 
-NandGate::NandGate(QGraphicsItem *parent): Gate(parent) {
+NandGate::NandGate(QGraphicsItem *parent) : Gate(parent) {
+    addInputPin(-29, 11);
+    addInputPin(-29, 41);
+    setOutputPin(120, 26);
 }
 
 QPainterPath NandGate::getPath() const {
@@ -15,17 +18,12 @@ QPainterPath NandGate::getPath() const {
     return path;
 }
 
-void NandGate::paint(QPainter *painter,
-                     const QStyleOptionGraphicsItem *,
-                     QWidget *) {
+void NandGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->setPen(Qt::black);
     painter->setBrush(Qt::white);
     painter->drawPath(getPath());
     painter->drawLine(-20, 15, 0, 15);
     painter->drawLine(-20, 45, 0, 45);
-    painter->drawEllipse(-29, 11, 8, 8);
-    painter->drawEllipse(-29, 41, 8, 8);
     painter->drawEllipse(100, 25, 10, 10);
     painter->drawLine(110, 30, 120, 30);
-    painter->drawEllipse(120, 26, 8, 8);
 }

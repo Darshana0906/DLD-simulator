@@ -5,9 +5,12 @@
 
 class Switch : public Input {
 public:
-    Switch(QGraphicsItem *parent = nullptr);
+    explicit Switch(QGraphicsItem *parent = nullptr);
+
 protected:
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 };
 
-#endif
+#endif // SWITCH_H

@@ -1,7 +1,10 @@
 #include "XorGate.h"
 #include <QPainter>
 
-XorGate::XorGate(QGraphicsItem *parent): Gate(parent) {
+XorGate::XorGate(QGraphicsItem *parent) : Gate(parent) {
+    addInputPin(-29, 11);
+    addInputPin(-29, 41);
+    setOutputPin(120, 26);
 }
 
 QPainterPath XorGate::getPath() const {
@@ -15,9 +18,8 @@ QPainterPath XorGate::getPath() const {
     path.cubicTo(10, 15, 10, 45, -10, 60);
     return path;
 }
-void XorGate::paint(QPainter *painter,
-                    const QStyleOptionGraphicsItem *,
-                    QWidget *) {
+
+void XorGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->setPen(Qt::black);
     painter->setBrush(Qt::white);
     painter->drawPath(getPath());
@@ -28,7 +30,4 @@ void XorGate::paint(QPainter *painter,
     painter->drawLine(-20, 15, 4, 15);
     painter->drawLine(-20, 45, 4, 45);
     painter->drawLine(100, 30, 120, 30);
-    painter->drawEllipse(-29, 11, 8, 8);
-    painter->drawEllipse(-29, 41, 8, 8);
-    painter->drawEllipse(120, 26, 8, 8);
 }

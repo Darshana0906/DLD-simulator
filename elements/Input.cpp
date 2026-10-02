@@ -1,5 +1,6 @@
 #include "Input.h"
 #include "Point.h"
+#include "Wire.h"
 #include "../CircuitScene.h"
 #include "../overlapping.h"
 
@@ -37,13 +38,11 @@ void Input::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *
     else
         painter->setBrush(Qt::darkGray);
 
-
     painter->drawRect(10, 10, 40, 30);
     painter->drawLine(50, 25, 60, 25);
 }
 
 void Input::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    // During placement mode pass through so the scene can handle placement.
     CircuitScene *cs = dynamic_cast<CircuitScene *>(scene());
     if (cs && cs->isPlacementMode()) {
         event->ignore();

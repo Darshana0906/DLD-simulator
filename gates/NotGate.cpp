@@ -2,6 +2,8 @@
 #include <QPainter>
 
 NotGate::NotGate(QGraphicsItem *parent) : Gate(parent) {
+    addInputPin(-29, 26);
+    setOutputPin(100, 26);
 }
 
 QPainterPath NotGate::getPath() const {
@@ -13,15 +15,11 @@ QPainterPath NotGate::getPath() const {
     path.addEllipse(80, 25, 10, 10);
     return path;
 }
-void NotGate::paint(QPainter *painter,
-                    const QStyleOptionGraphicsItem *,
-                    QWidget *) {
+
+void NotGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->setPen(Qt::black);
     painter->setBrush(Qt::white);
     painter->drawPath(getPath());
     painter->drawLine(-20, 30, 0, 30);
-    painter->drawEllipse(-29, 26, 8, 8);
-    painter->drawEllipse(80, 25, 10, 10);
     painter->drawLine(90, 30, 100, 30);
-    painter->drawEllipse(100, 26, 8, 8);
 }

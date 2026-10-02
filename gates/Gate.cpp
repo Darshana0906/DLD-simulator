@@ -21,7 +21,7 @@ QVariant Gate::itemChange(GraphicsItemChange change, const QVariant &value) {
 }
 
 QRectF Gate::boundingRect() const {
-    return QRectF(-32, -5, 164, 70);
+    return QRectF(-35, -5, 170, 70);
 }
 
 void Gate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
@@ -31,8 +31,6 @@ void Gate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 }
 
 void Gate::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    // During placement mode, pass the click through to the scene
-    // so a new element can be placed (instead of starting a drag).
     CircuitScene *cs = dynamic_cast<CircuitScene *>(scene());
     if (cs && cs->isPlacementMode()) {
         event->ignore();

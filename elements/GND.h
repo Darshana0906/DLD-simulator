@@ -3,9 +3,13 @@
 
 #include "Input.h"
 
-class GND : public Input{
+class GND : public Input {
 public:
-    GND(QGraphicsItem *parent = nullptr);
+    explicit GND(QGraphicsItem *parent = nullptr);
+
+protected:
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
 };
 
-#endif
+#endif // GND_H

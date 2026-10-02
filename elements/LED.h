@@ -5,10 +5,21 @@
 #include <QGraphicsSceneMouseEvent>
 
 class Point;
+class QPainter;
+
 class LED : public QGraphicsItem {
 public:
-    LED(QGraphicsItem *parent = nullptr);
+    explicit LED(QGraphicsItem *parent = nullptr);
     Point* getInputPoint() const;
+
+    bool getState() const;
+    void setState(bool s);
+
+    bool getValue() const;
+    void setValue(bool v);
+
+    bool getOp() const;
+    void setOp(bool op);
 
 protected:
     QRectF boundingRect() const override;
@@ -18,6 +29,7 @@ protected:
 
 private:
     Point *inputPoint;
+    bool state = false;
 };
 
 #endif
