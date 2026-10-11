@@ -1,5 +1,6 @@
 #include "CircuitScene.h"
 #include "SelectionBox.h"
+#include "overlapping.h"
 #include "elements/Point.h"
 #include "elements/Wire.h"
 #include <QPainter>
@@ -100,6 +101,13 @@ void CircuitScene::onPointClicked(Point *point) {
         // Create permanent Manhattan Wire between start pin and target pin
         Wire *wire = new Wire(start, point);
         addItem(wire);
+
+        if (!canPlaceWire(wire)) {
+            removeItem(wire);
+            delete wire;
+            emit errorMessage("Wire cannot cross through a gate or component!");
+            return;
+        }
 
         // Automatically exit Wire tool mode after completing 2-pin connection
         emit placementCancelled();
