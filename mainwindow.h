@@ -42,7 +42,7 @@ private slots:
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);
-    void placeElement(ElementType type, const QPointF &pos);
+    bool placeElement(ElementType type, const QPointF &pos);
 
     Ui::MainWindow *ui;
     CircuitScene *scene;

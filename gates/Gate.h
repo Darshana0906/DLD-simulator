@@ -29,5 +29,4 @@ private:
     QList<Point*> m_inputPins;
     Point* m_outputPin = nullptr;
 };
-
-#endif // GATE_H
+#endif

@@ -30,6 +30,7 @@ public:
 signals:
     void sceneClicked(const QPointF &pos);
     void placementCancelled();
+    void errorMessage(const QString &msg);
 
 private slots:
     void onSelectionChanged();
