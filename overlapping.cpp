@@ -163,12 +163,6 @@ bool canPlaceWire(Wire *wire) {
     // Skip the two components this wire is plugged into
     if (solidTop == startOwner || solidTop == endOwner)
       continue;
-<<<<<<< HEAD
-    if (dynamic_cast<Wire *>(candidate) && dynamic_cast<Wire *>(item))
-      continue;
-    if (newRect.intersects(item->sceneBoundingRect()))
-      return false;
-=======
 
     QRectF compRect = item->sceneBoundingRect();
     for (int i = 0; i + 1 < segments.size(); ++i) {
@@ -189,17 +183,6 @@ bool canPlaceWire(Wire *wire) {
         return false; // Wire intersects an unrelated solid component!
       }
     }
->>>>>>> 7d0d2d1 (overlapping implementation majorly done(pending:if wire overlaps gate then replace gate position or manhattan to be used?))
   }
   return true;
-}
-
-bool canMoveItem(QGraphicsItem *movingItem, const QRectF &newRect) {
-  return canOverlap(movingItem, newRect,
-                    movingItem ? movingItem->scene() : nullptr);
-}
-
-bool canPlaceItem(QGraphicsItem *candidate, const QRectF &newRect,
-                  QGraphicsScene *scene) {
-  return canOverlap(candidate, newRect, scene);
 }
