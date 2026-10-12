@@ -11,19 +11,145 @@
 Wire::Wire(Point *start, Point *end, QGraphicsItem *parent)
     : QGraphicsItem(parent), startPoint(start), endPoint(end) {
     setFlag(QGraphicsItem::ItemIsSelectable);
-    setFlag(QGraphicsItem::ItemIsMovable);
-    setFlag(QGraphicsItem::ItemSendsGeometryChanges);
+    setZValue(10); // Wires render below pins, above background
+
+    if (startPoint) {
+        startPoint->addWire(this);
+    }
+    if (endPoint) {
+        endPoint->addWire(this);
+        m_isPreview = false;
+    } else {
+        m_isPreview = true;
+    }
+
+    updatePath();
 }
 
-QVariant Wire::itemChange(GraphicsItemChange change, const QVariant &value) {
-    if (change == QGraphicsItem::ItemPositionChange && scene()) {
-        const QPointF delta = parentItem()
-            ? parentItem()->mapToScene(value.toPointF()) - parentItem()->mapToScene(pos())
-            : value.toPointF() - pos();
-        if (!canMoveItem(this, sceneBoundingRect().translated(delta)))
-            return pos();
+Wire::~Wire() {
+    if (startPoint) {
+        startPoint->removeWire(this);
     }
-    return QGraphicsItem::itemChange(change, value);
+    if (endPoint) {
+        endPoint->removeWire(this);
+    }
+}
+
+void Wire::setEndPoint(Point *end) {
+    if (endPoint) {
+        endPoint->removeWire(this);
+    }
+    endPoint = end;
+    if (endPoint) {
+        endPoint->addWire(this);
+        m_isPreview = false;
+    }
+    updatePath();
+}
+
+void Wire::setPreviewPos(const QPointF &pos) {
+    m_previewPos = pos;
+    m_isPreview = true;
+    updatePath();
+}
+
+void Wire::updatePath() {
+    prepareGeometryChange();
+    calculateManhattanPath();
+    update();
+
+    // Trigger update on all scene wires so crossing arc hops refresh immediately
+    if (scene() && !m_isPreview) {
+        for (QGraphicsItem *item : scene()->items()) {
+            if (Wire *otherWire = dynamic_cast<Wire*>(item)) {
+                if (otherWire != this && !otherWire->m_isPreview) {
+                    otherWire->update();
+                }
+            }
+        }
+    }
+}
+
+void Wire::calculateManhattanPath() {
+    m_pathPoints.clear();
+
+    if (!startPoint) {
+        m_cachedBoundingRect = QRectF();
+        return;
+    }
+
+    QPointF startScene = startPoint->getCenterScenePos();
+    QPointF endScene = (endPoint != nullptr) ? endPoint->getCenterScenePos() : m_previewPos;
+
+    // Convert scene coordinates to local item coordinates
+    QPointF p1 = mapFromScene(startScene);
+    QPointF p2 = mapFromScene(endScene);
+
+    m_pathPoints.append(p1);
+
+    // Determine stub directions based on pin types
+    PinType startType = startPoint->getPinType();
+    PinType endType = (endPoint != nullptr) ? endPoint->getPinType() : PinType::Input;
+
+    // Input pins extend LEFT (-25px); Output/Standalone pins extend RIGHT (+25px)
+    qreal startStubDx = (startType == PinType::Input) ? -25.0 : 25.0;
+    qreal endStubDx = (endType == PinType::Output) ? 25.0 : -25.0;
+
+    QPointF stub1(p1.x() + startStubDx, p1.y());
+    QPointF stub2(p2.x() + endStubDx, p2.y());
+
+    m_pathPoints.append(stub1);
+
+    // Route between stub1 and stub2 orthogonally
+    if (qFuzzyCompare(stub1.y(), stub2.y())) {
+        // Same horizontal line
+        m_pathPoints.append(stub2);
+    } else if (startStubDx > 0 && endStubDx < 0 && stub1.x() < stub2.x()) {
+        // Standard Output -> Input left-to-right flow
+        qreal midX = (stub1.x() + stub2.x()) / 2.0;
+        m_pathPoints.append(QPointF(midX, stub1.y()));
+        m_pathPoints.append(QPointF(midX, stub2.y()));
+        m_pathPoints.append(stub2);
+    } else if (startStubDx < 0 && endStubDx < 0 && stub1.x() < stub2.x()) {
+        // Input -> Input flow
+        qreal midX = std::min(stub1.x(), stub2.x());
+        m_pathPoints.append(QPointF(midX, stub1.y()));
+        m_pathPoints.append(QPointF(midX, stub2.y()));
+        m_pathPoints.append(stub2);
+    } else {
+        // Backward or overlapping routing: route via intermediate midY offset
+        qreal midY = (stub1.y() + stub2.y()) / 2.0;
+        if (std::abs(stub1.y() - stub2.y()) < 40.0) {
+            midY = std::min(stub1.y(), stub2.y()) - 35.0;
+        }
+
+        m_pathPoints.append(QPointF(stub1.x(), midY));
+        m_pathPoints.append(QPointF(stub2.x(), midY));
+        m_pathPoints.append(stub2);
+    }
+
+    m_pathPoints.append(p2);
+
+    // Compute bounding rect enclosing all path segments
+    if (m_pathPoints.isEmpty()) {
+        m_cachedBoundingRect = QRectF();
+        return;
+    }
+
+    qreal minX = m_pathPoints.first().x();
+    qreal maxX = minX;
+    qreal minY = m_pathPoints.first().y();
+    qreal maxY = minY;
+
+    for (const QPointF &pt : m_pathPoints) {
+        minX = std::min(minX, pt.x());
+        maxX = std::max(maxX, pt.x());
+        minY = std::min(minY, pt.y());
+        maxY = std::max(maxY, pt.y());
+    }
+
+    const qreal margin = 16.0;
+    m_cachedBoundingRect = QRectF(minX, minY, maxX - minX, maxY - minY).adjusted(-margin, -margin, margin, margin);
 }
 
 QRectF Wire::boundingRect() const {
@@ -140,5 +266,5 @@ void Wire::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
         path.lineTo(pEnd);
     }
 
-    painter->drawLine(start, end);
+    painter->drawPath(path);
 }

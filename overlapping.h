@@ -23,8 +23,4 @@ bool canMoveItem(QGraphicsItem *movingItem, const QRectF &candidateSceneRect);
 // (other than the components it connects to)
 bool canPlaceWire(Wire *wire);
 
-bool canMoveItem(QGraphicsItem *movingItem, const QRectF &newRect);
-bool canPlaceItem(QGraphicsItem *candidate, const QRectF &newRect,
-                  QGraphicsScene *scene);
-
 #endif

@@ -1,6 +1,7 @@
 #include "Gate.h"
 #include "../CircuitScene.h"
 #include "../overlapping.h"
+#include "../elements/Wire.h"
 #include <QPainter>
 
 Gate::Gate(QGraphicsItem *parent) : QGraphicsItem(parent) {
@@ -9,17 +10,20 @@ Gate::Gate(QGraphicsItem *parent) : QGraphicsItem(parent) {
   setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 }
 
-QVariant Gate::itemChange(GraphicsItemChange change, const QVariant &value) {
-  if (change == QGraphicsItem::ItemPositionChange && scene()) {
-    const QPointF delta = parentItem()
-                              ? parentItem()->mapToScene(value.toPointF()) -
-                                    parentItem()->mapToScene(pos())
-                              : value.toPointF() - pos();
-    if (!canMoveItem(this, sceneBoundingRect().translated(delta)))
-      return pos();
-  }
-  return QGraphicsItem::itemChange(change, value);
+void Gate::addInputPin(qreal x, qreal y) {
+  Point *pin = new Point(this, false, PinType::Input);
+  pin->setPos(x, y);
+  m_inputPins.append(pin);
 }
+
+void Gate::setOutputPin(qreal x, qreal y) {
+  if (m_outputPin) {
+    delete m_outputPin;
+  }
+  m_outputPin = new Point(this, false, PinType::Output);
+  m_outputPin->setPos(x, y);
+}
+
 
 QRectF Gate::boundingRect() const { return QRectF(-35, -5, 170, 70); }
 
@@ -39,7 +43,6 @@ void Gate::mousePressEvent(QGraphicsSceneMouseEvent *event) {
   QGraphicsItem::mousePressEvent(event);
 }
 
-#include "../overlapping.h"
 
 QVariant Gate::itemChange(GraphicsItemChange change, const QVariant &value) {
   if (change == ItemPositionChange && scene()) {
