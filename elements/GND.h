@@ -7,6 +7,8 @@ class GND : public Input {
 public:
     explicit GND(QGraphicsItem *parent = nullptr);
 
+    LogicState getLogicState() const override { return LogicState::LOW; }
+
 protected:
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;

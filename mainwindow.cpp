@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 #include "CircuitScene.h"
 #include "ZoomGraphicsView.h"
+#include "logic/CircuitAdapter.h"
 #include "elements/Const1.h"
 #include "elements/GND.h"
 #include "elements/LED.h"
@@ -360,5 +361,8 @@ bool MainWindow::placeElement(ElementType type, const QPointF &pos) {
   }
 
   scene->addItem(item);
+  if (scene->getAdapter()) {
+    scene->getAdapter()->syncInputsFromScene();
+  }
   return true;
 }

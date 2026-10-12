@@ -58,6 +58,12 @@ set(PROJECT_SOURCES
         elements/Switch.h
         elements/Switch.cpp
 
+        logic/LogicTypes.h
+        logic/Node.h
+        logic/Node.cpp
+        logic/CircuitAdapter.h
+        logic/CircuitAdapter.cpp
+
         resources.qrc
 
 )

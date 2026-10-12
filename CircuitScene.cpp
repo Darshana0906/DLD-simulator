@@ -3,12 +3,15 @@
 #include "overlapping.h"
 #include "elements/Point.h"
 #include "elements/Wire.h"
+#include "logic/CircuitAdapter.h"
 #include <QPainter>
 #include <QLineF>
 
 CircuitScene::CircuitScene(QObject *parent)
     : QGraphicsScene(parent), m_placementMode(false), m_activeSelectionBox(nullptr) {
     setBackgroundBrush(QColor(248, 249, 250));
+
+    m_adapter = new CircuitAdapter(this, this);
 
     connect(this, &QGraphicsScene::selectionChanged, this, &CircuitScene::onSelectionChanged);
 }
@@ -132,6 +135,10 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
 
     if (m_activeSelectionBox && (m_activeSelectionBox == item || m_activeSelectionBox->parentItem() == item)) {
         clearSelectionBox();
+    }
+
+    if (m_adapter) {
+        m_adapter->unregisterItem(item);
     }
 
     removeItem(item);
