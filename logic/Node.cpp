@@ -75,3 +75,98 @@ LogicState InputNode::getState() const {
     return m_state;
 }
 
+// =========================================================================
+// GateNode Implementation
+// =========================================================================
+
+GateNode::GateNode(int id, NodeType gateType, size_t inputCount)
+    : Node(id, gateType) {
+    if (gateType == NodeType::GATE_NOT) {
+        m_inputs.resize(1, LogicState::UNDEFINED);
+    } else {
+        m_inputs.resize(inputCount, LogicState::UNDEFINED);
+    }
+    m_outputs.resize(1, LogicState::UNDEFINED);
+}
+
+void GateNode::evaluate() {
+    setOutput(0, evaluateGate(m_type, m_inputs));
+}
+
+LogicState GateNode::evaluateGate(NodeType type, const std::vector<LogicState>& inputs) {
+    if (inputs.empty()) {
+        return LogicState::UNDEFINED;
+    }
+
+    switch (type) {
+    case NodeType::GATE_NOT: {
+        LogicState in = inputs[0];
+        if (in == LogicState::HIGH) return LogicState::LOW;
+        if (in == LogicState::LOW) return LogicState::HIGH;
+        return LogicState::UNDEFINED;
+    }
+    case NodeType::GATE_AND: {
+        bool hasUndefined = false;
+        for (LogicState in : inputs) {
+            if (in == LogicState::LOW) return LogicState::LOW;
+            if (in == LogicState::UNDEFINED) hasUndefined = true;
+        }
+        return hasUndefined ? LogicState::UNDEFINED : LogicState::HIGH;
+    }
+    case NodeType::GATE_OR: {
+        bool hasUndefined = false;
+        for (LogicState in : inputs) {
+            if (in == LogicState::HIGH) return LogicState::HIGH;
+            if (in == LogicState::UNDEFINED) hasUndefined = true;
+        }
+        return hasUndefined ? LogicState::UNDEFINED : LogicState::LOW;
+    }
+    case NodeType::GATE_NAND: {
+        LogicState andRes = evaluateGate(NodeType::GATE_AND, inputs);
+        if (andRes == LogicState::HIGH) return LogicState::LOW;
+        if (andRes == LogicState::LOW) return LogicState::HIGH;
+        return LogicState::UNDEFINED;
+    }
+    case NodeType::GATE_NOR: {
+        LogicState orRes = evaluateGate(NodeType::GATE_OR, inputs);
+        if (orRes == LogicState::HIGH) return LogicState::LOW;
+        if (orRes == LogicState::LOW) return LogicState::HIGH;
+        return LogicState::UNDEFINED;
+    }
+    case NodeType::GATE_XOR: {
+        int highCount = 0;
+        for (LogicState in : inputs) {
+            if (in == LogicState::UNDEFINED) return LogicState::UNDEFINED;
+            if (in == LogicState::HIGH) highCount++;
+        }
+        return (highCount % 2 != 0) ? LogicState::HIGH : LogicState::LOW;
+    }
+    case NodeType::GATE_XNOR: {
+        LogicState xorRes = evaluateGate(NodeType::GATE_XOR, inputs);
+        if (xorRes == LogicState::HIGH) return LogicState::LOW;
+        if (xorRes == LogicState::LOW) return LogicState::HIGH;
+        return LogicState::UNDEFINED;
+    }
+    default:
+        return LogicState::UNDEFINED;
+    }
+}
+
+// =========================================================================
+// OutputNode Implementation
+// =========================================================================
+
+OutputNode::OutputNode(int id)
+    : Node(id, NodeType::OUTPUT_LED) {
+    m_inputs.resize(1, LogicState::UNDEFINED);
+    m_outputs.resize(1, LogicState::UNDEFINED);
+}
+
+void OutputNode::evaluate() {
+    setOutput(0, getInput(0));
+}
+
+LogicState OutputNode::getState() const {
+    return getOutput(0);
+}
+

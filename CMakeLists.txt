@@ -61,6 +61,8 @@ set(PROJECT_SOURCES
         logic/LogicTypes.h
         logic/Node.h
         logic/Node.cpp
+        logic/CircuitDAG.h
+        logic/CircuitDAG.cpp
         logic/CircuitAdapter.h
         logic/CircuitAdapter.cpp
 

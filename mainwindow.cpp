@@ -22,6 +22,7 @@
 #include <QKeySequence>
 #include <QLabel>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QSize>
 #include <QStatusBar>
 #include <QToolBar>
@@ -196,6 +197,42 @@ MainWindow::MainWindow(QWidget *parent)
   ledButton->setFixedSize(96, 64);
   toolbar->addWidget(ledButton);
 
+  // Simulation Section in left toolbar
+  QLabel *simlabel = new QLabel("SIMULATION");
+  simlabel->setAlignment(Qt::AlignCenter);
+  toolbar->addWidget(simlabel);
+  simlabel->setFont(font);
+  simlabel->setStyleSheet("background-color: lightgray;");
+
+  QPushButton *simButton = new QPushButton("▶ SIMULATE");
+  simButton->setToolTip("Simulate Circuit using Topological Sort (F5)");
+  simButton->setFixedSize(96, 42);
+  simButton->setStyleSheet(
+      "QPushButton { background-color: #2E7D32; color: white; font-weight: bold; font-size: 11px; border-radius: 4px; border: 1px solid #1B5E20; }"
+      "QPushButton:hover { background-color: #388E3C; }"
+      "QPushButton:pressed { background-color: #1B5E20; }"
+  );
+  toolbar->addWidget(simButton);
+  connect(simButton, &QPushButton::clicked, this, &MainWindow::runSimulation);
+
+  // Top Controls Toolbar
+  QToolBar *topControlBar = new QToolBar("Circuit Controls", this);
+  topControlBar->setMovable(false);
+  addToolBar(Qt::TopToolBarArea, topControlBar);
+
+  QAction *simulateAction = new QAction("▶  Simulate Circuit", this);
+  simulateAction->setShortcut(QKeySequence(Qt::Key_F5));
+  simulateAction->setToolTip("Evaluate circuit states using Topological Sort (F5)");
+  topControlBar->addAction(simulateAction);
+  connect(simulateAction, &QAction::triggered, this, &MainWindow::runSimulation);
+
+  topControlBar->addSeparator();
+
+  QAction *clearAction = new QAction("🗑  Clear Circuit", this);
+  clearAction->setToolTip("Remove all components and wires from canvas");
+  topControlBar->addAction(clearAction);
+  connect(clearAction, &QAction::triggered, this, &MainWindow::clearCircuit);
+
   // connections
   connect(andAction, &QAction::triggered, this,
           [this]() { setPlacementTool(ElementType::AndGate, "AND Gate"); });
@@ -362,7 +399,51 @@ bool MainWindow::placeElement(ElementType type, const QPointF &pos) {
 
   scene->addItem(item);
   if (scene->getAdapter()) {
-    scene->getAdapter()->syncInputsFromScene();
+    scene->getAdapter()->registerItem(item);
   }
   return true;
 }
+
+void MainWindow::runSimulation() {
+  if (!scene || !scene->getAdapter())
+    return;
+
+  CircuitAdapter *adapter = scene->getAdapter();
+
+  // 1. Sync all components on canvas and extract directed edges from wires
+  adapter->syncSceneItems();
+  adapter->extractWires();
+
+  if (adapter->getNodeCount() == 0) {
+    statusBar()->showMessage("Cannot simulate: Canvas is empty. Place components and wires first.", 3500);
+    return;
+  }
+
+  // 2. Perform stepSimulation (topological evaluation via DAG)
+  adapter->stepSimulation();
+
+  // 3. User feedback
+  if (adapter->hasCycle()) {
+    statusBar()->showMessage("Simulation Warning: Combinational loop / cycle detected! Iterative relaxation applied.", 4000);
+    QMessageBox::warning(this, "Cycle Detected",
+                         "The circuit contains feedback loop(s) or cyclic dependencies.\n"
+                         "Iterative relaxation was applied to evaluate steady state.");
+  } else {
+    auto order = adapter->getTopologicalOrder();
+    statusBar()->showMessage(
+        QString("Simulation successful! Evaluated %1 nodes in topological order.").arg(order.size()),
+        4000
+    );
+  }
+}
+
+void MainWindow::clearCircuit() {
+  if (QMessageBox::question(this, "Clear Circuit", "Are you sure you want to clear the entire circuit?") == QMessageBox::Yes) {
+    scene->clear();
+    if (scene->getAdapter()) {
+      scene->getAdapter()->extractWires();
+    }
+    statusBar()->showMessage("Circuit cleared.", 2500);
+  }
+}
+

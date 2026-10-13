@@ -6,7 +6,6 @@
 #include "logic/CircuitAdapter.h"
 #include <QPainter>
 #include <QLineF>
-#include <QDebug>
 
 CircuitScene::CircuitScene(QObject *parent)
     : QGraphicsScene(parent), m_placementMode(false), m_activeSelectionBox(nullptr) {
@@ -113,23 +112,9 @@ void CircuitScene::onPointClicked(Point *point) {
             return;
         }
 
-        // Store the nodeIds of the two connected elements on the wire
+        // Notify the adapter so it registers the edge in the logic graph
         if (m_adapter) {
-            QGraphicsItem *startParent = start->parentItem();
-            QGraphicsItem *endParent = point->parentItem();
-            if (startParent) {
-                int id = m_adapter->getNodeId(startParent);
-                if (id < 0) id = m_adapter->registerItem(startParent);
-                wire->setStartNodeId(id);
-            }
-            if (endParent) {
-                int id = m_adapter->getNodeId(endParent);
-                if (id < 0) id = m_adapter->registerItem(endParent);
-                wire->setEndNodeId(id);
-            }
-
-            qDebug() << "[Wire Connected] startNodeId =" << wire->getStartNodeId()
-                     << ", endNodeId =" << wire->getEndNodeId();
+            m_adapter->onWireConnected(wire);
         }
 
         // Automatically exit Wire tool mode after completing 2-pin connection
@@ -158,7 +143,12 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
     }
 
     if (m_adapter) {
-        m_adapter->unregisterItem(item);
+        // If it's a wire, remove its edge from the logic graph first
+        if (Wire *wire = dynamic_cast<Wire*>(item)) {
+            m_adapter->onWireRemoved(wire);
+        } else {
+            m_adapter->unregisterItem(item);
+        }
     }
 
     removeItem(item);

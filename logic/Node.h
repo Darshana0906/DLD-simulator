@@ -51,5 +51,30 @@ private:
     LogicState m_state;
 };
 
+// =========================================================================
+// GateNode: Represents logic gates (AND, OR, NOT, NAND, NOR, XOR, XNOR)
+// =========================================================================
+class GateNode : public Node {
+public:
+    explicit GateNode(int id, NodeType gateType, size_t inputCount = 2);
+
+    void evaluate() override;
+
+    static LogicState evaluateGate(NodeType type, const std::vector<LogicState>& inputs);
+};
+
+// =========================================================================
+// OutputNode: Represents output indicators (e.g. LED, bulb)
+// =========================================================================
+class OutputNode : public Node {
+public:
+    explicit OutputNode(int id);
+
+    void evaluate() override;
+
+    LogicState getState() const;
+    bool isOn() const { return getState() == LogicState::HIGH; }
+};
+
 #endif // NODE_H
 

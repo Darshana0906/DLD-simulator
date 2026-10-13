@@ -39,6 +39,8 @@ private slots:
     void onSceneClicked(const QPointF &pos);
     void cancelPlacement();
     void toggleFullScreenMode();
+    void runSimulation();
+    void clearCircuit();
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);

@@ -5,19 +5,29 @@
 #include "../elements/GND.h"
 #include "../elements/Const1.h"
 #include "../elements/LED.h"
+#include "../elements/Point.h"
+#include "../elements/Wire.h"
+#include "../gates/Gate.h"
+#include "../gates/AndGate.h"
+#include "../gates/OrGate.h"
+#include "../gates/NotGate.h"
+#include "../gates/NandGate.h"
+#include "../gates/NorGate.h"
+#include "../gates/XorGate.h"
+#include "../gates/XnorGate.h"
 #include <QGraphicsItem>
 
 CircuitAdapter::CircuitAdapter(CircuitScene *scene, QObject *parent)
     : QObject(parent), m_scene(scene) {
     if (m_scene) {
-        syncInputsFromScene();
+        syncSceneItems();
     }
 }
 
 void CircuitAdapter::setScene(CircuitScene *scene) {
     m_scene = scene;
     if (m_scene) {
-        syncInputsFromScene();
+        syncSceneItems();
     }
 }
 
@@ -41,7 +51,7 @@ int CircuitAdapter::registerItem(QGraphicsItem *item, int preferredId) {
     m_itemToId[item] = id;
     m_idToItem[id] = item;
 
-    // Automatically instantiate corresponding InputNode if it is an Input item
+    // Automatically instantiate corresponding Node based on item type
     if (GND *gnd = dynamic_cast<GND*>(item)) {
         m_nodes[id] = std::make_unique<InputNode>(id, LogicState::LOW, NodeType::INPUT_GND);
     } else if (Const1 *c1 = dynamic_cast<Const1*>(item)) {
@@ -54,8 +64,25 @@ int CircuitAdapter::registerItem(QGraphicsItem *item, int preferredId) {
         sw->setOnToggleCallback([this](Switch *s, bool val) {
             onSwitchToggled(s, val);
         });
+    } else if (dynamic_cast<AndGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_AND, 2);
+    } else if (dynamic_cast<OrGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_OR, 2);
+    } else if (dynamic_cast<NotGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NOT, 1);
+    } else if (dynamic_cast<NandGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NAND, 2);
+    } else if (dynamic_cast<NorGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NOR, 2);
+    } else if (dynamic_cast<XorGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_XOR, 2);
+    } else if (dynamic_cast<XnorGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_XNOR, 2);
+    } else if (dynamic_cast<LED*>(item)) {
+        m_nodes[id] = std::make_unique<OutputNode>(id);
     }
 
+    m_dag.addNode(id);
     return id;
 }
 
@@ -81,6 +108,7 @@ void CircuitAdapter::unregisterItem(QGraphicsItem *item) {
     auto it = m_itemToId.find(item);
     if (it != m_itemToId.end()) {
         int id = it->second;
+        m_dag.removeNode(id);
         m_idToItem.erase(id);
         m_nodes.erase(id);
         m_itemToId.erase(it);
@@ -99,12 +127,176 @@ Node* CircuitAdapter::getNode(int id) const {
     return nullptr;
 }
 
+GateNode* CircuitAdapter::getGateNode(int id) const {
+    return getNodeAs<GateNode>(id);
+}
+
+GateNode* CircuitAdapter::getGateNode(Gate *gateItem) const {
+    int id = getNodeId(gateItem);
+    return (id >= 0) ? getGateNode(id) : nullptr;
+}
+
+OutputNode* CircuitAdapter::getOutputNode(int id) const {
+    return getNodeAs<OutputNode>(id);
+}
+
+OutputNode* CircuitAdapter::getOutputNode(LED *ledItem) const {
+    int id = getNodeId(ledItem);
+    return (id >= 0) ? getOutputNode(id) : nullptr;
+}
+
+bool CircuitAdapter::getPinInfo(Point *pin, int &nodeId, bool &isOutput, int &pinIndex) const {
+    if (!pin) return false;
+    QGraphicsItem *owner = pin->parentItem() ? pin->parentItem() : pin->topLevelItem();
+    if (!owner) return false;
+
+    nodeId = getNodeId(owner);
+    if (nodeId < 0) return false;
+
+    if (Gate *gate = dynamic_cast<Gate*>(owner)) {
+        if (pin == gate->getOutputPin()) {
+            isOutput = true;
+            pinIndex = 0;
+            return true;
+        }
+        const auto &inPins = gate->getInputPins();
+        for (int i = 0; i < inPins.size(); ++i) {
+            if (inPins[i] == pin) {
+                isOutput = false;
+                pinIndex = i;
+                return true;
+            }
+        }
+    } else if (Input *inp = dynamic_cast<Input*>(owner)) {
+        if (pin == inp->getOutputPoint()) {
+            isOutput = true;
+            pinIndex = 0;
+            return true;
+        }
+    } else if (LED *led = dynamic_cast<LED*>(owner)) {
+        if (pin == led->getInputPoint()) {
+            isOutput = false;
+            pinIndex = 0;
+            return true;
+        }
+    }
+    return false;
+}
+
+void CircuitAdapter::syncSceneItems() {
+    if (!m_scene) return;
+
+    for (QGraphicsItem *item : m_scene->items()) {
+        if (dynamic_cast<Gate*>(item) || dynamic_cast<Input*>(item) || dynamic_cast<LED*>(item)) {
+            registerItem(item);
+        }
+    }
+    syncInputsFromScene();
+}
+
 // =========================================================================
-// MEMBER 2: Wire Extraction & Graph Edge Connectivity (Stub for Member 2)
+// MEMBER 2: Wire Extraction & Graph Edge Connectivity
 // =========================================================================
 
+// Helper: resolve a visual Point* pin to (nodeId, pinIndex, isOutput)
+bool CircuitAdapter::resolvePinToEndpoint(Point *pin, int &nodeId, int &pinIndex, bool &isOutput) const {
+    return getPinInfo(pin, nodeId, isOutput, pinIndex);
+}
+
+// Build an Edge from a single wire and register it in the adapter.
+// Always returns { sourceNodeId -> targetNodeId } with the Output pin as source.
+static Edge buildEdge(Point *startPin, Point *endPin, CircuitAdapter *adapter) {
+    int startNodeId = -1, endNodeId = -1;
+    int startPinIdx = 0, endPinIdx = 0;
+    bool startIsOutput = false, endIsOutput = false;
+
+    if (!adapter->getPinInfo(startPin, startNodeId, startIsOutput, startPinIdx))
+        return {};
+    if (!adapter->getPinInfo(endPin, endNodeId, endIsOutput, endPinIdx))
+        return {};
+
+    Edge edge;
+    if (startIsOutput) {
+        // start = source, end = target
+        edge.sourceNodeId = startNodeId;
+        edge.sourcePinIdx = startPinIdx;
+        edge.targetNodeId = endNodeId;
+        edge.targetPinIdx = endPinIdx;
+    } else {
+        // end = source, start = target (user drew wire backwards – normalize it)
+        edge.sourceNodeId = endNodeId;
+        edge.sourcePinIdx = endPinIdx;
+        edge.targetNodeId = startNodeId;
+        edge.targetPinIdx = startPinIdx;
+    }
+    return edge;
+}
+
 void CircuitAdapter::extractWires() {
-    // Member 2 will populate directed edges between Gate/Input/Output pins here
+    if (!m_scene) return;
+
+    m_wireToEdge.clear();
+    m_edges.clear();
+
+    std::vector<int> nodeIds;
+    nodeIds.reserve(m_nodes.size());
+    for (const auto &pair : m_nodes) {
+        nodeIds.push_back(pair.first);
+    }
+
+    for (QGraphicsItem *item : m_scene->items()) {
+        Wire *wire = dynamic_cast<Wire*>(item);
+        if (!wire || !wire->getStartPoint() || !wire->getEndPoint()) continue;
+
+        Edge edge = buildEdge(wire->getStartPoint(), wire->getEndPoint(), this);
+        if (!edge.isValid()) continue;
+
+        m_wireToEdge[wire] = edge;
+        m_edges.push_back(edge);
+    }
+
+    // Rebuild the DAG with all nodes and extracted edges
+    m_dag.build(nodeIds, m_edges);
+
+    stepSimulation();
+}
+
+void CircuitAdapter::onWireConnected(Wire *wire) {
+    if (!wire || !wire->getStartPoint() || !wire->getEndPoint()) return;
+
+    Edge edge = buildEdge(wire->getStartPoint(), wire->getEndPoint(), this);
+    if (!edge.isValid()) return;
+
+    m_wireToEdge[wire] = edge;
+    m_edges.push_back(edge);
+    m_dag.addEdge(edge);
+
+    stepSimulation();
+}
+
+void CircuitAdapter::onWireRemoved(Wire *wire) {
+    if (!wire) return;
+
+    auto it = m_wireToEdge.find(wire);
+    if (it == m_wireToEdge.end()) return;
+
+    const Edge edge = it->second;
+
+    // Reset the input pin on the target node to UNDEFINED
+    if (Node *targetNode = getNode(edge.targetNodeId)) {
+        targetNode->setInput(static_cast<size_t>(edge.targetPinIdx), LogicState::UNDEFINED);
+    }
+
+    // Remove from flat edge list
+    m_edges.erase(
+        std::remove(m_edges.begin(), m_edges.end(), edge),
+        m_edges.end()
+    );
+
+    m_wireToEdge.erase(it);
+    m_dag.removeEdge(edge);
+
+    stepSimulation();
 }
 
 // =========================================================================
@@ -207,7 +399,7 @@ InputNode* CircuitAdapter::getInputNode(Input *inputItem) const {
 void CircuitAdapter::syncOutputsToScene() {
     if (!m_scene) return;
 
-    // Default basic hook for Member 4: update any LEDs if their logic node is set
+    // 1. Update LEDs
     for (QGraphicsItem *item : m_scene->items()) {
         if (LED *led = dynamic_cast<LED*>(item)) {
             int id = getNodeId(led);
@@ -218,6 +410,18 @@ void CircuitAdapter::syncOutputsToScene() {
             }
         }
     }
+
+    // 2. Update Wires visual signal state based on driving output pin
+    for (auto &pair : m_wireToEdge) {
+        Wire *wire = pair.first;
+        const Edge &edge = pair.second;
+        if (wire && edge.isValid()) {
+            if (Node *srcNode = getNode(edge.sourceNodeId)) {
+                LogicState st = srcNode->getOutput(static_cast<size_t>(edge.sourcePinIdx));
+                wire->setLogicValue(st == LogicState::HIGH ? 1 : (st == LogicState::LOW ? 0 : -1));
+            }
+        }
+    }
 }
 
 // =========================================================================
@@ -225,11 +429,13 @@ void CircuitAdapter::syncOutputsToScene() {
 // =========================================================================
 
 void CircuitAdapter::stepSimulation() {
-    // 1. Evaluate all registered nodes
-    for (auto &pair : m_nodes) {
-        if (pair.second) {
-            pair.second->evaluate();
-        }
+    // 1. Evaluate logic graph using topological sort on the DAG
+    bool stable = m_dag.evaluate(m_nodes);
+
+    if (!stable && m_dag.hasCycle()) {
+        std::vector<int> sortedOrder, cycleNodes;
+        m_dag.topologicalSort(sortedOrder, cycleNodes);
+        emit cycleDetected(cycleNodes);
     }
 
     // 2. Read back outputs to Qt visuals (LEDs, wires)

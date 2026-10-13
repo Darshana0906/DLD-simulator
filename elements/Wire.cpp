@@ -178,8 +178,19 @@ void Wire::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 
     painter->setRenderHint(QPainter::Antialiasing);
 
-    QColor wireColor = isSelected() ? QColor(33, 150, 243) : QColor(33, 33, 33);
-    qreal lineWidth = isSelected() ? 3.0 : 2.0;
+    QColor wireColor = QColor(66, 66, 66);
+    qreal lineWidth = 2.0;
+
+    if (isSelected()) {
+        wireColor = QColor(33, 150, 243); // Blue for selection
+        lineWidth = 3.0;
+    } else if (m_logicValue == 1) {
+        wireColor = QColor(0, 200, 83);   // Bright green for logic HIGH
+        lineWidth = 2.5;
+    } else if (m_logicValue == 0) {
+        wireColor = QColor(38, 50, 56);   // Dark slate for logic LOW
+        lineWidth = 2.0;
+    }
 
     if (m_isPreview) {
         wireColor = QColor(76, 175, 80);
