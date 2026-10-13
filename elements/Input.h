@@ -3,14 +3,19 @@
 
 #include <QGraphicsItem>
 #include <QGraphicsSceneMouseEvent>
+#include "../logic/LogicTypes.h"
 
 class Point;
 class Input : public QGraphicsItem {
 public:
     Input(bool value = false, QGraphicsItem *parent = nullptr);
+    virtual ~Input() = default;
+
     bool getValue() const;
-    void setValue(bool value);
+    virtual void setValue(bool value);
     Point* getOutputPoint() const;
+
+    virtual LogicState getLogicState() const;
 
 protected:
     bool value;

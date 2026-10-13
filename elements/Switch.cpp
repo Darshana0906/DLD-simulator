@@ -12,6 +12,22 @@ Switch::Switch(QGraphicsItem *parent) : Input(false, parent) {
     }
 }
 
+void Switch::setValue(bool v) {
+    bool changed = (value != v);
+    Input::setValue(v);
+    if (changed && m_onToggle) {
+        m_onToggle(this, v);
+    }
+}
+
+void Switch::setOnToggleCallback(ToggleCallback callback) {
+    m_onToggle = std::move(callback);
+}
+
+Switch::ToggleCallback Switch::getOnToggleCallback() const {
+    return m_onToggle;
+}
+
 QRectF Switch::boundingRect() const {
     return QRectF(0, 0, 65, 50);
 }

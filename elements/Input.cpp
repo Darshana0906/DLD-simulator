@@ -22,6 +22,10 @@ void Input::setValue(bool value) {
   update();
 }
 
+LogicState Input::getLogicState() const {
+  return value ? LogicState::HIGH : LogicState::LOW;
+}
+
 Point *Input::getOutputPoint() const { return outputPoint; }
 
 QRectF Input::boundingRect() const { return QRectF(0, 0, 65, 50); }

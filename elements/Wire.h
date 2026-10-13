@@ -23,6 +23,14 @@ public:
 
     QVector<QPointF> getSegments() const { return m_pathPoints; }
 
+    int getLogicValue() const { return m_logicValue; }
+    void setLogicValue(int val) {
+        if (m_logicValue != val) {
+            m_logicValue = val;
+            update();
+        }
+    }
+
 protected:
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -38,6 +46,8 @@ private:
 
     QVector<QPointF> m_pathPoints;
     QRectF m_cachedBoundingRect;
+
+    int m_logicValue = -1; // -1: Undefined, 0: Low, 1: High
 };
 
 #endif

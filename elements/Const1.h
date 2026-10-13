@@ -8,6 +8,8 @@ protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget = nullptr) override;
 public:
     Const1(QGraphicsItem *parent = nullptr);
+
+    LogicState getLogicState() const override { return LogicState::HIGH; }
 };
 
 #endif

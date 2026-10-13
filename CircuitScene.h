@@ -8,12 +8,15 @@
 class SelectionBox;
 class Point;
 class Wire;
+class CircuitAdapter;
 
 class CircuitScene : public QGraphicsScene {
     Q_OBJECT
 public:
     explicit CircuitScene(QObject *parent = nullptr);
     ~CircuitScene();
+
+    CircuitAdapter* getAdapter() const { return m_adapter; }
 
     void setPlacementMode(bool active);
     bool isPlacementMode() const;
@@ -51,6 +54,7 @@ private:
     Point *m_wireStartPoint = nullptr;
     Wire *m_draftWire = nullptr;
     Point *m_hoveredPin = nullptr;
+    CircuitAdapter *m_adapter = nullptr;
 };
 
 #endif // CIRCUITSCENE_H
