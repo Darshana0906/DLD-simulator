@@ -23,6 +23,15 @@ public:
 
     QVector<QPointF> getSegments() const { return m_pathPoints; }
 
+    // Connection data: nodeIds of the two elements this wire connects
+    int getStartNodeId() const { return m_startNodeId; }
+    void setStartNodeId(int id) { m_startNodeId = id; }
+
+    int getEndNodeId() const { return m_endNodeId; }
+    void setEndNodeId(int id) { m_endNodeId = id; }
+
+    bool hasConnectedNodes() const { return m_startNodeId >= 0 && m_endNodeId >= 0; }
+
 protected:
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -38,6 +47,9 @@ private:
 
     QVector<QPointF> m_pathPoints;
     QRectF m_cachedBoundingRect;
+
+    int m_startNodeId = -1;
+    int m_endNodeId = -1;
 };
 
 #endif

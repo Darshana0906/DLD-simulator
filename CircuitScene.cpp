@@ -6,6 +6,7 @@
 #include "logic/CircuitAdapter.h"
 #include <QPainter>
 #include <QLineF>
+#include <QDebug>
 
 CircuitScene::CircuitScene(QObject *parent)
     : QGraphicsScene(parent), m_placementMode(false), m_activeSelectionBox(nullptr) {
@@ -110,6 +111,25 @@ void CircuitScene::onPointClicked(Point *point) {
             delete wire;
             emit errorMessage("Wire cannot cross through a gate or component!");
             return;
+        }
+
+        // Store the nodeIds of the two connected elements on the wire
+        if (m_adapter) {
+            QGraphicsItem *startParent = start->parentItem();
+            QGraphicsItem *endParent = point->parentItem();
+            if (startParent) {
+                int id = m_adapter->getNodeId(startParent);
+                if (id < 0) id = m_adapter->registerItem(startParent);
+                wire->setStartNodeId(id);
+            }
+            if (endParent) {
+                int id = m_adapter->getNodeId(endParent);
+                if (id < 0) id = m_adapter->registerItem(endParent);
+                wire->setEndNodeId(id);
+            }
+
+            qDebug() << "[Wire Connected] startNodeId =" << wire->getStartNodeId()
+                     << ", endNodeId =" << wire->getEndNodeId();
         }
 
         // Automatically exit Wire tool mode after completing 2-pin connection
