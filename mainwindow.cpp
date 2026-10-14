@@ -61,6 +61,12 @@ MainWindow::MainWindow(QWidget *parent)
     QMessageBox::warning(this, "Overlap Warning", msg);
   });
 
+  if (scene->getAdapter()) {
+    connect(scene->getAdapter(), &CircuitAdapter::simulationInvalidated, this, [this]() {
+      statusBar()->showMessage("Circuit modified. Click 'Simulate' (F5) to evaluate.", 4000);
+    });
+  }
+
   // Fullscreen shortcut (F11)
   QAction *fullScreenAction = new QAction(this);
   fullScreenAction->setShortcut(QKeySequence(Qt::Key_F11));

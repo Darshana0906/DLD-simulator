@@ -1,4 +1,5 @@
 #include "Point.h"
+#include "Wire.h"
 #include "../CircuitScene.h"
 #include <QPainter>
 #include <QCursor>
@@ -13,6 +14,14 @@ Point::Point(QGraphicsItem *parent, bool movable, PinType type)
 }
 
 Point::~Point() {
+    // Notify all connected wires to detach from this point safely.
+    // Make a copy of the list because detachPoint may modify m_wires indirectly.
+    QList<Wire*> wires = m_wires;
+    for (Wire *wire : wires) {
+        if (wire) {
+            wire->detachPoint(this);
+        }
+    }
 }
 
 void Point::setHighlighted(bool highlight) {

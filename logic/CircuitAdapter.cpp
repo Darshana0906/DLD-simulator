@@ -108,10 +108,42 @@ void CircuitAdapter::unregisterItem(QGraphicsItem *item) {
     auto it = m_itemToId.find(item);
     if (it != m_itemToId.end()) {
         int id = it->second;
+
+        // Clean up edges and wires connected to this node
+        std::vector<Wire*> wiresToDisconnect;
+        for (auto &pair : m_wireToEdge) {
+            const Edge &edge = pair.second;
+            if (edge.sourceNodeId == id || edge.targetNodeId == id) {
+                wiresToDisconnect.push_back(pair.first);
+                // Reset input pin on target node if it wasn't the one deleted
+                if (edge.targetNodeId != id) {
+                    if (Node *targetNode = getNode(edge.targetNodeId)) {
+                        targetNode->setInput(static_cast<size_t>(edge.targetPinIdx), LogicState::UNDEFINED);
+                    }
+                }
+            }
+        }
+
+        for (Wire *w : wiresToDisconnect) {
+            if (w) {
+                w->setLogicValue(-1);
+            }
+            m_wireToEdge.erase(w);
+        }
+
+        m_edges.erase(
+            std::remove_if(m_edges.begin(), m_edges.end(), [id](const Edge &e) {
+                return e.sourceNodeId == id || e.targetNodeId == id;
+            }),
+            m_edges.end()
+        );
+
         m_dag.removeNode(id);
         m_idToItem.erase(id);
         m_nodes.erase(id);
         m_itemToId.erase(it);
+
+        emit simulationInvalidated();
     }
 }
 
@@ -257,8 +289,6 @@ void CircuitAdapter::extractWires() {
 
     // Rebuild the DAG with all nodes and extracted edges
     m_dag.build(nodeIds, m_edges);
-
-    stepSimulation();
 }
 
 void CircuitAdapter::onWireConnected(Wire *wire) {
@@ -271,7 +301,7 @@ void CircuitAdapter::onWireConnected(Wire *wire) {
     m_edges.push_back(edge);
     m_dag.addEdge(edge);
 
-    stepSimulation();
+    emit simulationInvalidated();
 }
 
 void CircuitAdapter::onWireRemoved(Wire *wire) {
@@ -296,7 +326,7 @@ void CircuitAdapter::onWireRemoved(Wire *wire) {
     m_wireToEdge.erase(it);
     m_dag.removeEdge(edge);
 
-    stepSimulation();
+    emit simulationInvalidated();
 }
 
 // =========================================================================
@@ -340,8 +370,8 @@ void CircuitAdapter::onSwitchToggled(Switch *switchItem, bool newState) {
         emit inputChanged(id, state);
     }
 
-    // Immediately step simulation and push updated outputs to visuals
-    stepSimulation();
+    // Mark simulation as stale — do not change LED/wire visuals until user clicks Simulate
+    emit simulationInvalidated();
 }
 
 void CircuitAdapter::setInputValue(int nodeId, LogicState state) {
@@ -357,7 +387,7 @@ void CircuitAdapter::setInputValue(int nodeId, LogicState state) {
             }
         }
 
-        stepSimulation();
+        emit simulationInvalidated();
     }
 }
 
@@ -420,6 +450,29 @@ void CircuitAdapter::syncOutputsToScene() {
                 LogicState st = srcNode->getOutput(static_cast<size_t>(edge.sourcePinIdx));
                 wire->setLogicValue(st == LogicState::HIGH ? 1 : (st == LogicState::LOW ? 0 : -1));
             }
+        }
+    }
+}
+
+// =========================================================================
+// Reset Outputs to Neutral (called when circuit is edited to clear stale results)
+// =========================================================================
+
+void CircuitAdapter::resetOutputsToNeutral() {
+    if (!m_scene) return;
+
+    // Reset all LEDs to OFF (neutral) state
+    for (QGraphicsItem *item : m_scene->items()) {
+        if (LED *led = dynamic_cast<LED*>(item)) {
+            led->setState(false);
+        }
+    }
+
+    // Reset all wire visual states to undefined
+    for (auto &pair : m_wireToEdge) {
+        Wire *wire = pair.first;
+        if (wire) {
+            wire->setLogicValue(-1);
         }
     }
 }

@@ -142,6 +142,13 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
         clearSelectionBox();
     }
 
+    if (m_hoveredPin && (m_hoveredPin == item || m_hoveredPin->topLevelItem() == item->topLevelItem())) {
+        m_hoveredPin = nullptr;
+    }
+    if (m_wireStartPoint && (m_wireStartPoint == item || m_wireStartPoint->topLevelItem() == item->topLevelItem())) {
+        clearWirePlacement();
+    }
+
     if (m_adapter) {
         // If it's a wire, remove its edge from the logic graph first
         if (Wire *wire = dynamic_cast<Wire*>(item)) {

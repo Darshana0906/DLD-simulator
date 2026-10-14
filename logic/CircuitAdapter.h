@@ -100,6 +100,7 @@ public:
     // MEMBER 4: Logic Outputs Readback to LEDs & Wires
     // =========================================================================
     void syncOutputsToScene();
+    void resetOutputsToNeutral();
 
     // =========================================================================
     // SIMULATION ENGINE TRIGGER (DAG Topological Evaluation)
@@ -116,6 +117,7 @@ public:
 signals:
     void inputChanged(int nodeId, LogicState newState);
     void simulationStepped();
+    void simulationInvalidated();
     void cycleDetected(const std::vector<int> &cycleNodeIds);
 
 private:
