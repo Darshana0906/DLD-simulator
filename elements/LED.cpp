@@ -127,7 +127,7 @@ QVariant LED::itemChange(GraphicsItemChange change, const QVariant &value) {
     }
   }
 
-  if ((change == ItemPositionHasChanged || change == ItemTransformHasChanged) &&
+  if ((change == ItemPositionHasChanged || change == ItemTransformHasChanged || change == ItemScaleHasChanged) &&
       inputPoint) {
     for (Wire *wire : inputPoint->getWires()) {
       wire->updatePath();

@@ -11,7 +11,7 @@ Input::Input(bool value, QGraphicsItem *parent)
   setFlag(QGraphicsItem::ItemIsMovable);
   setFlag(QGraphicsItem::ItemIsSelectable);
   setFlag(QGraphicsItem::ItemSendsGeometryChanges);
-  outputPoint = new Point(this, false);
+  outputPoint = new Point(this, false, PinType::Output);
   outputPoint->setPos(55, 20);
 }
 
@@ -63,7 +63,7 @@ QVariant Input::itemChange(GraphicsItemChange change, const QVariant &value) {
     }
   }
 
-  if ((change == ItemPositionHasChanged || change == ItemTransformHasChanged) &&
+  if ((change == ItemPositionHasChanged || change == ItemTransformHasChanged || change == ItemScaleHasChanged) &&
       outputPoint) {
     for (Wire *wire : outputPoint->getWires()) {
       wire->updatePath();

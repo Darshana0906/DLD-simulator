@@ -247,6 +247,9 @@ static Edge buildEdge(Point *startPin, Point *endPin, CircuitAdapter *adapter) {
     if (!adapter->getPinInfo(endPin, endNodeId, endIsOutput, endPinIdx))
         return {};
 
+    if (startIsOutput == endIsOutput)
+        return {}; // Invalid connection: Output-to-Output or Input-to-Input
+
     Edge edge;
     if (startIsOutput) {
         // start = source, end = target

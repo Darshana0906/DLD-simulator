@@ -2,7 +2,6 @@
 #include "./ui_mainwindow.h"
 #include "CircuitScene.h"
 #include "ZoomGraphicsView.h"
-#include "logic/CircuitAdapter.h"
 #include "elements/Const1.h"
 #include "elements/GND.h"
 #include "elements/LED.h"
@@ -16,6 +15,7 @@
 #include "gates/OrGate.h"
 #include "gates/XnorGate.h"
 #include "gates/XorGate.h"
+#include "logic/CircuitAdapter.h"
 #include "overlapping.h"
 #include <QAction>
 #include <QIcon>
@@ -32,6 +32,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+  setWindowTitle("DLD Simulator");
 
   scene = new CircuitScene(this);
   scene->setSceneRect(0, 0, 4000, 3000);
@@ -62,9 +63,11 @@ MainWindow::MainWindow(QWidget *parent)
   });
 
   if (scene->getAdapter()) {
-    connect(scene->getAdapter(), &CircuitAdapter::simulationInvalidated, this, [this]() {
-      statusBar()->showMessage("Circuit modified. Click 'Simulate' (F5) to evaluate.", 4000);
-    });
+    connect(scene->getAdapter(), &CircuitAdapter::simulationInvalidated, this,
+            [this]() {
+              statusBar()->showMessage(
+                  "Circuit modified. Click 'Simulate' (F5) to evaluate.", 4000);
+            });
   }
 
   // Fullscreen shortcut (F11)
@@ -214,10 +217,10 @@ MainWindow::MainWindow(QWidget *parent)
   simButton->setToolTip("Simulate Circuit using Topological Sort (F5)");
   simButton->setFixedSize(96, 42);
   simButton->setStyleSheet(
-      "QPushButton { background-color: #2E7D32; color: white; font-weight: bold; font-size: 11px; border-radius: 4px; border: 1px solid #1B5E20; }"
+      "QPushButton { background-color: #2E7D32; color: white; font-weight: "
+      "bold; font-size: 11px; border-radius: 4px; border: 1px solid #1B5E20; }"
       "QPushButton:hover { background-color: #388E3C; }"
-      "QPushButton:pressed { background-color: #1B5E20; }"
-  );
+      "QPushButton:pressed { background-color: #1B5E20; }");
   toolbar->addWidget(simButton);
   connect(simButton, &QPushButton::clicked, this, &MainWindow::runSimulation);
 
@@ -228,9 +231,11 @@ MainWindow::MainWindow(QWidget *parent)
 
   QAction *simulateAction = new QAction("▶  Simulate Circuit", this);
   simulateAction->setShortcut(QKeySequence(Qt::Key_F5));
-  simulateAction->setToolTip("Evaluate circuit states using Topological Sort (F5)");
+  simulateAction->setToolTip(
+      "Evaluate circuit states using Topological Sort (F5)");
   topControlBar->addAction(simulateAction);
-  connect(simulateAction, &QAction::triggered, this, &MainWindow::runSimulation);
+  connect(simulateAction, &QAction::triggered, this,
+          &MainWindow::runSimulation);
 
   topControlBar->addSeparator();
 
@@ -421,7 +426,9 @@ void MainWindow::runSimulation() {
   adapter->extractWires();
 
   if (adapter->getNodeCount() == 0) {
-    statusBar()->showMessage("Cannot simulate: Canvas is empty. Place components and wires first.", 3500);
+    statusBar()->showMessage(
+        "Cannot simulate: Canvas is empty. Place components and wires first.",
+        3500);
     return;
   }
 
@@ -430,21 +437,28 @@ void MainWindow::runSimulation() {
 
   // 3. User feedback
   if (adapter->hasCycle()) {
-    statusBar()->showMessage("Simulation Warning: Combinational loop / cycle detected! Iterative relaxation applied.", 4000);
-    QMessageBox::warning(this, "Cycle Detected",
-                         "The circuit contains feedback loop(s) or cyclic dependencies.\n"
-                         "Iterative relaxation was applied to evaluate steady state.");
+    statusBar()->showMessage("Simulation Warning: Combinational loop / cycle "
+                             "detected! Iterative relaxation applied.",
+                             4000);
+    QMessageBox::warning(
+        this, "Cycle Detected",
+        "The circuit contains feedback loop(s) or cyclic dependencies.\n"
+        "Iterative relaxation was applied to evaluate steady state.");
   } else {
     auto order = adapter->getTopologicalOrder();
     statusBar()->showMessage(
-        QString("Simulation successful! Evaluated %1 nodes in topological order.").arg(order.size()),
-        4000
-    );
+        QString(
+            "Simulation successful! Evaluated %1 nodes in topological order.")
+            .arg(order.size()),
+        4000);
   }
 }
 
 void MainWindow::clearCircuit() {
-  if (QMessageBox::question(this, "Clear Circuit", "Are you sure you want to clear the entire circuit?") == QMessageBox::Yes) {
+  if (QMessageBox::question(
+          this, "Clear Circuit",
+          "Are you sure you want to clear the entire circuit?") ==
+      QMessageBox::Yes) {
     scene->clear();
     if (scene->getAdapter()) {
       scene->getAdapter()->extractWires();
@@ -452,4 +466,3 @@ void MainWindow::clearCircuit() {
     statusBar()->showMessage("Circuit cleared.", 2500);
   }
 }
-

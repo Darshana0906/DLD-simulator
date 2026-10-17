@@ -1,5 +1,7 @@
 #include "SelectionBox.h"
 #include "overlapping.h"
+#include "elements/Point.h"
+#include "elements/Wire.h"
 #include <QBrush>
 #include <QCursor>
 #include <QLineF>
@@ -7,6 +9,17 @@
 #include <QPen>
 #include <QRectF>
 #include <QtMath>
+
+static void updateItemWires(QGraphicsItem *item) {
+  if (!item) return;
+  for (QGraphicsItem *child : item->childItems()) {
+    if (Point *pin = dynamic_cast<Point*>(child)) {
+      for (Wire *wire : pin->getWires()) {
+        wire->updatePath();
+      }
+    }
+  }
+}
 
 SelectionBox::SelectionBox(QGraphicsItem *targetItem)
     : QGraphicsItem(targetItem), m_targetItem(targetItem) {
@@ -132,6 +145,9 @@ void SelectionBox::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
       m_targetItem->setScale(prevScale);
     }
 
+    // Adjust all connected wires immediately to follow scaled pins
+    updateItemWires(m_targetItem);
+
     prepareGeometryChange();
     update();
     event->accept();
@@ -144,6 +160,7 @@ void SelectionBox::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
   if (m_isResizing) {
     m_isResizing = false;
     m_activeHandle = HandleNone;
+    updateItemWires(m_targetItem);
     prepareGeometryChange();
     update();
     event->accept();
