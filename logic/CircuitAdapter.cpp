@@ -318,6 +318,14 @@ void CircuitAdapter::onWireRemoved(Wire *wire) {
     // Reset the input pin on the target node to UNDEFINED
     if (Node *targetNode = getNode(edge.targetNodeId)) {
         targetNode->setInput(static_cast<size_t>(edge.targetPinIdx), LogicState::UNDEFINED);
+        targetNode->evaluate();
+    }
+
+    // If target node is an LED, reset its visual state to unstimulated (-1) immediately
+    if (QGraphicsItem *targetItem = getItem(edge.targetNodeId)) {
+        if (LED *led = dynamic_cast<LED*>(targetItem)) {
+            led->setLogicValue(-1);
+        }
     }
 
     // Remove from flat edge list
@@ -438,8 +446,10 @@ void CircuitAdapter::syncOutputsToScene() {
             int id = getNodeId(led);
             if (id >= 0) {
                 if (Node *node = getNode(id)) {
-                    led->setState(node->getOutput(0) == LogicState::HIGH);
+                    led->setLogicState(node->getOutput(0));
                 }
+            } else {
+                led->setLogicValue(-1);
             }
         }
     }
@@ -464,10 +474,10 @@ void CircuitAdapter::syncOutputsToScene() {
 void CircuitAdapter::resetOutputsToNeutral() {
     if (!m_scene) return;
 
-    // Reset all LEDs to OFF (neutral) state
+    // Reset all LEDs to unstimulated (question mark) state
     for (QGraphicsItem *item : m_scene->items()) {
         if (LED *led = dynamic_cast<LED*>(item)) {
-            led->setState(false);
+            led->setLogicValue(-1);
         }
     }
 

@@ -11,7 +11,7 @@
 #include <QPointF>
 #include <QRectF>
 
-LED::LED(QGraphicsItem *parent) : QGraphicsItem(parent), state(false) {
+LED::LED(QGraphicsItem *parent) : QGraphicsItem(parent), state(-1) {
   setFlag(QGraphicsItem::ItemIsMovable);
   setFlag(QGraphicsItem::ItemIsSelectable);
   setFlag(QGraphicsItem::ItemSendsGeometryChanges);
@@ -22,13 +22,39 @@ LED::LED(QGraphicsItem *parent) : QGraphicsItem(parent), state(false) {
 
 Point *LED::getInputPoint() const { return inputPoint; }
 
-bool LED::getState() const { return state; }
+int LED::getLogicValue() const { return state; }
 
-void LED::setState(bool s) {
-  if (state != s) {
-    state = s;
+void LED::setLogicValue(int val) {
+  if (state != val) {
+    state = val;
     update();
   }
+}
+
+LogicState LED::getLogicState() const {
+  if (state == 1) return LogicState::HIGH;
+  if (state == 0) return LogicState::LOW;
+  return LogicState::UNDEFINED;
+}
+
+void LED::setLogicState(LogicState s) {
+  if (s == LogicState::HIGH) {
+    setLogicValue(1);
+  } else if (s == LogicState::LOW) {
+    setLogicValue(0);
+  } else {
+    setLogicValue(-1);
+  }
+}
+
+void LED::resetToUnstimulated() {
+  setLogicValue(-1);
+}
+
+bool LED::getState() const { return state == 1; }
+
+void LED::setState(bool s) {
+  setLogicValue(s ? 1 : 0);
 }
 
 bool LED::getValue() const { return getState(); }
@@ -54,34 +80,67 @@ void LED::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
   bulbPath.cubicTo(42.0, 23.0, 36.0, 27.0, 35.5, 33.5);
   bulbPath.closeSubpath();
 
-  // Bulb glows yellow when op is 1, white when 0
-  painter->setBrush(state ? QColor(255, 235, 59) : Qt::white);
+  // Glass bulb background:
+  // state == 1: Glows yellow when stimulated with 1
+  // state == 0: Clean white when stimulated with 0
+  // state == -1: Muted light slate-gray when unstimulated (nothing connected / unsimulated)
+  if (state == 1) {
+    painter->setBrush(QColor(255, 235, 59));
+  } else if (state == 0) {
+    painter->setBrush(Qt::white);
+  } else {
+    painter->setBrush(QColor(241, 245, 249));
+  }
+
   painter->setPen(
       QPen(Qt::black, 2, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
   painter->drawPath(bulbPath);
 
-  // Socket collar inside bulb
-  painter->setBrush(state ? QColor(255, 245, 150) : Qt::white);
-  painter->setPen(
-      QPen(Qt::black, 1.5, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
-  painter->drawRect(QRectF(25.5, 29.5, 5.0, 4.0));
+  if (state == -1) {
+    // -----------------------------------------------------------------
+    // UNSTIMULATED STATE: Draw prominent Question Mark (?) inside bulb
+    // -----------------------------------------------------------------
+    // Subtle internal socket collar
+    painter->setBrush(QColor(226, 232, 240));
+    painter->setPen(
+        QPen(QColor(100, 116, 139), 1.5, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
+    painter->drawRect(QRectF(25.5, 29.5, 5.0, 4.0));
 
-  // Filament supports
-  painter->setPen(QPen(Qt::black, 1.5, Qt::SolidLine, Qt::RoundCap));
-  painter->drawLine(QPointF(26.5, 29.5), QPointF(23.0, 20.0));
-  painter->drawLine(QPointF(29.5, 29.5), QPointF(33.0, 20.0));
+    // Crisp, bold Question Mark centered in the glass dome
+    QFont qFont = painter->font();
+    qFont.setBold(true);
+    qFont.setPixelSize(17);
+    painter->setFont(qFont);
+    painter->setPen(QPen(QColor(71, 85, 105), 2));
+    QRectF qRect(14.0, 5.0, 28.0, 24.0);
+    painter->drawText(qRect, Qt::AlignCenter, "?");
+  } else {
+    // -----------------------------------------------------------------
+    // STIMULATED STATE (0 or 1): Socket Collar & Zigzag Filament
+    // -----------------------------------------------------------------
+    // Socket collar inside bulb
+    painter->setBrush((state == 1) ? QColor(255, 245, 150) : Qt::white);
+    painter->setPen(
+        QPen(Qt::black, 1.5, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin));
+    painter->drawRect(QRectF(25.5, 29.5, 5.0, 4.0));
 
-  // Zigzag filament
-  QPainterPath filament;
-  filament.moveTo(23.0, 20.0);
-  filament.lineTo(24.7, 18.2);
-  filament.lineTo(26.3, 20.0);
-  filament.lineTo(28.0, 18.2);
-  filament.lineTo(29.7, 20.0);
-  filament.lineTo(31.3, 18.2);
-  filament.lineTo(33.0, 20.0);
-  painter->setBrush(Qt::NoBrush);
-  painter->drawPath(filament);
+    // Filament supports
+    painter->setPen(QPen(Qt::black, 1.5, Qt::SolidLine, Qt::RoundCap));
+    painter->drawLine(QPointF(26.5, 29.5), QPointF(23.0, 20.0));
+    painter->drawLine(QPointF(29.5, 29.5), QPointF(33.0, 20.0));
+
+    // Zigzag filament
+    QPainterPath filament;
+    filament.moveTo(23.0, 20.0);
+    filament.lineTo(24.7, 18.2);
+    filament.lineTo(26.3, 20.0);
+    filament.lineTo(28.0, 18.2);
+    filament.lineTo(29.7, 20.0);
+    filament.lineTo(31.3, 18.2);
+    filament.lineTo(33.0, 20.0);
+    painter->setBrush(Qt::NoBrush);
+    painter->drawPath(filament);
+  }
 
   // Screw base threads (3 rounded ribs)
   painter->setBrush(Qt::white);
