@@ -64,20 +64,20 @@ int CircuitAdapter::registerItem(QGraphicsItem *item, int preferredId) {
         sw->setOnToggleCallback([this](Switch *s, bool val) {
             onSwitchToggled(s, val);
         });
-    } else if (dynamic_cast<AndGate*>(item)) {
-        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_AND, 2);
-    } else if (dynamic_cast<OrGate*>(item)) {
-        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_OR, 2);
+    } else if (Gate *gate = dynamic_cast<AndGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_AND, gate->getInputPins().size());
+    } else if (Gate *gate = dynamic_cast<OrGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_OR, gate->getInputPins().size());
     } else if (dynamic_cast<NotGate*>(item)) {
         m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NOT, 1);
-    } else if (dynamic_cast<NandGate*>(item)) {
-        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NAND, 2);
-    } else if (dynamic_cast<NorGate*>(item)) {
-        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NOR, 2);
-    } else if (dynamic_cast<XorGate*>(item)) {
-        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_XOR, 2);
-    } else if (dynamic_cast<XnorGate*>(item)) {
-        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_XNOR, 2);
+    } else if (Gate *gate = dynamic_cast<NandGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NAND, gate->getInputPins().size());
+    } else if (Gate *gate = dynamic_cast<NorGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_NOR, gate->getInputPins().size());
+    } else if (Gate *gate = dynamic_cast<XorGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_XOR, gate->getInputPins().size());
+    } else if (Gate *gate = dynamic_cast<XnorGate*>(item)) {
+        m_nodes[id] = std::make_unique<GateNode>(id, NodeType::GATE_XNOR, gate->getInputPins().size());
     } else if (dynamic_cast<LED*>(item)) {
         m_nodes[id] = std::make_unique<OutputNode>(id);
     }

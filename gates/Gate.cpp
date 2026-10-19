@@ -3,6 +3,7 @@
 #include "../overlapping.h"
 #include "../elements/Wire.h"
 #include <QPainter>
+#include <QInputDialog>
 
 Gate::Gate(QGraphicsItem *parent) : QGraphicsItem(parent) {
   setFlag(QGraphicsItem::ItemIsMovable);
@@ -69,4 +70,42 @@ QVariant Gate::itemChange(GraphicsItemChange change, const QVariant &value) {
     }
   }
   return QGraphicsItem::itemChange(change, value);
+}
+
+void Gate::setInputCount(int count) {
+    // Delete old input pins
+    qDeleteAll(m_inputPins);
+    m_inputPins.clear();
+
+    // Evenly space pins between y = 10 and y = 50
+    qreal startY = 10.0;
+    qreal endY = 50.0;
+    qreal step = (count > 1) ? (endY - startY) / (count - 1) : 0;
+
+    for (int i = 0; i < count; ++i) {
+        qreal centerY = startY + i * step;
+        qreal pinY = centerY - 5.0; // Subtract 5 to center the dot on centerY
+        addInputPin(-29, pinY);
+    }
+
+    update();
+}
+
+void Gate::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) {
+    QInputDialog dialog;
+
+    dialog.setWindowTitle("Gate Inputs");
+    dialog.setLabelText("Number of inputs (2 to 8):");
+    dialog.setInputMode(QInputDialog::IntInput);
+    dialog.setIntValue(m_inputPins.size());
+    dialog.setIntMinimum(2);
+    dialog.setIntMaximum(8);
+    dialog.setIntStep(1);
+
+    dialog.resize(400, 120);
+  
+
+    if (dialog.exec() == QDialog::Accepted) {
+        setInputCount(dialog.intValue());
+    }
 }
