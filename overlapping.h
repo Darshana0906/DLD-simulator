@@ -19,8 +19,10 @@ bool canPlaceItem(QGraphicsScene *scene, const QRectF &sceneRect,
 // Checks if moving or resizing an item to candidateSceneRect is collision-free
 bool canMoveItem(QGraphicsItem *movingItem, const QRectF &candidateSceneRect);
 
+// Returns the solid body rectangle of a component in scene coordinates (excluding pins)
+QRectF getComponentBodyRect(QGraphicsItem *item);
+
 // Checks if a candidate wire polyline path crosses over any solid components
-// (other than the components it connects to)
 bool canPlaceWire(Wire *wire);
 
 #endif

@@ -140,18 +140,48 @@ bool canMoveItem(QGraphicsItem *movingItem, const QRectF &candidateSceneRect) {
   return true;
 }
 
+#include "gates/NotGate.h"
+#include <QSet>
+
+QRectF getComponentBodyRect(QGraphicsItem *item) {
+  if (!item)
+    return QRectF();
+
+  QGraphicsItem *top = item->topLevelItem();
+  if (!top)
+    return QRectF();
+
+  if (Gate *gate = dynamic_cast<Gate *>(top)) {
+    // Gate body: excludes terminal pins.
+    // Input pins are at x <= -24, output pin is at x >= 120 (x >= 100 for NotGate).
+    // The gate body spans x from -15 to 110 (90 for NotGate), y from -2 to 62.
+    qreal width = dynamic_cast<NotGate *>(top) ? 105.0 : 125.0;
+    QRectF bodyLocal(-15.0, -2.0, width, 64.0);
+    return gate->mapToScene(bodyLocal).boundingRect();
+  }
+  if (Input *input = dynamic_cast<Input *>(top)) {
+    // Input box from (8, 8, 44, 34)
+    QRectF bodyLocal(8.0, 8.0, 44.0, 34.0);
+    return input->mapToScene(bodyLocal).boundingRect();
+  }
+  if (LED *led = dynamic_cast<LED *>(top)) {
+    // LED bulb body from (10, 0, 36, 50)
+    QRectF bodyLocal(10.0, 0.0, 36.0, 50.0);
+    return led->mapToScene(bodyLocal).boundingRect();
+  }
+
+  return top->sceneBoundingRect();
+}
+
 bool canPlaceWire(Wire *wire) {
   if (!wire || !wire->scene())
     return true;
 
-  QGraphicsItem *startOwner =
-      wire->getStartPoint() ? wire->getStartPoint()->topLevelItem() : nullptr;
-  QGraphicsItem *endOwner =
-      wire->getEndPoint() ? wire->getEndPoint()->topLevelItem() : nullptr;
-
   QVector<QPointF> segments = wire->getSegments();
   if (segments.size() < 2)
     return true;
+
+  QSet<QGraphicsItem *> checkedTops;
 
   for (QGraphicsItem *item : wire->scene()->items()) {
     if (!item || item == wire)
@@ -160,11 +190,14 @@ bool canPlaceWire(Wire *wire) {
       continue;
 
     QGraphicsItem *solidTop = item->topLevelItem();
-    // Skip the two components this wire is plugged into
-    if (solidTop == startOwner || solidTop == endOwner)
+    if (!solidTop || checkedTops.contains(solidTop))
+      continue;
+    checkedTops.insert(solidTop);
+
+    QRectF compRect = getComponentBodyRect(solidTop);
+    if (compRect.isEmpty())
       continue;
 
-    QRectF compRect = item->sceneBoundingRect();
     for (int i = 0; i + 1 < segments.size(); ++i) {
       QPointF p1 = wire->mapToScene(segments[i]);
       QPointF p2 = wire->mapToScene(segments[i + 1]);
@@ -180,7 +213,7 @@ bool canPlaceWire(Wire *wire) {
           seg.intersects(bottom, &ip) == QLineF::BoundedIntersection ||
           seg.intersects(left, &ip) == QLineF::BoundedIntersection ||
           seg.intersects(right, &ip) == QLineF::BoundedIntersection) {
-        return false; // Wire intersects an unrelated solid component!
+        return false; // Wire intersects a solid component body!
       }
     }
   }
