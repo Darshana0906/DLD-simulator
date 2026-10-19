@@ -19,9 +19,14 @@ QPainterPath OrGate::getPath() const {
 
 void OrGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->setPen(Qt::black);
+    for (Point *pin : getInputPins()) {
+        qreal y = pin->y() + 5;
+        painter->drawLine(-20, y, 25, y);
+    }
+    //lines are later painted by the white paint as we are drawing path in next step
+
     painter->setBrush(Qt::white);
     painter->drawPath(getPath());
-    painter->drawLine(-20, 15, 14, 15);
-    painter->drawLine(-20, 45, 13, 45);
+    
     painter->drawLine(100, 30, 120, 30);
 }

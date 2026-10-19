@@ -27,7 +27,13 @@ void XorGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget
     extraCurve.moveTo(-8, 0);
     extraCurve.cubicTo(12, 15, 12, 45, -8, 60);
     painter->drawPath(extraCurve);
-    painter->drawLine(-20, 15, 4, 15);
-    painter->drawLine(-20, 45, 4, 45);
+    
+    for (Point *pin : getInputPins()) {
+        qreal y = pin->y() + 5;
+        qreal dy = (y - 30.0) / 30.0;
+        qreal endX = 7.0 - 15.0 * (dy * dy);
+        painter->drawLine(-20, y, endX, y);
+    }
+
     painter->drawLine(100, 30, 120, 30);
 }

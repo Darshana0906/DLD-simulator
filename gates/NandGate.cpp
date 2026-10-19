@@ -20,10 +20,14 @@ QPainterPath NandGate::getPath() const {
 
 void NandGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->setPen(Qt::black);
+    for (Point *pin : getInputPins()) {
+        qreal y = pin->y() + 5;
+        painter->drawLine(-20, y, 25, y);
+    }
     painter->setBrush(Qt::white);
     painter->drawPath(getPath());
-    painter->drawLine(-20, 15, 0, 15);
-    painter->drawLine(-20, 45, 0, 45);
+
     painter->drawEllipse(100, 25, 10, 10);
+
     painter->drawLine(110, 30, 120, 30);
 }

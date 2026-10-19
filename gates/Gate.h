@@ -10,9 +10,11 @@
 class Gate : public QGraphicsItem {
 public:
     explicit Gate(QGraphicsItem *parent = nullptr);
-
+    void setInputCount(int count);
+    int getInputCount() const { return m_inputPins.size(); }
     const QList<Point*>& getInputPins() const { return m_inputPins; }
     Point* getOutputPin() const { return m_outputPin; }
+
 
 protected:
     QRectF boundingRect() const override;
@@ -21,7 +23,7 @@ protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
 
     virtual QPainterPath getPath() const = 0;
-
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
     void addInputPin(qreal x, qreal y);
     void setOutputPin(qreal x, qreal y);
 
