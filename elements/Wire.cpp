@@ -15,9 +15,15 @@ Wire::Wire(Point *start, Point *end, QGraphicsItem *parent)
 
     if (startPoint) {
         startPoint->addWire(this);
+        m_savedStartPos = startPoint->getCenterScenePos();
+        m_savedStartPinType = startPoint->getPinType();
+        m_hasStartPos = true;
     }
     if (endPoint) {
         endPoint->addWire(this);
+        m_savedEndPos = endPoint->getCenterScenePos();
+        m_savedEndPinType = endPoint->getPinType();
+        m_hasEndPos = true;
         m_isPreview = false;
     } else {
         m_isPreview = true;
@@ -29,10 +35,36 @@ Wire::Wire(Point *start, Point *end, QGraphicsItem *parent)
 Wire::~Wire() {
     if (startPoint) {
         startPoint->removeWire(this);
+        startPoint = nullptr;
     }
     if (endPoint) {
         endPoint->removeWire(this);
+        endPoint = nullptr;
     }
+}
+
+void Wire::detachPoint(Point *point) {
+    if (!point) return;
+
+    if (startPoint == point) {
+        // Save last known position and pin type before nulling
+        m_savedStartPos = startPoint->getCenterScenePos();
+        m_savedStartPinType = startPoint->getPinType();
+        m_hasStartPos = true;
+        startPoint = nullptr;
+    }
+    if (endPoint == point) {
+        m_savedEndPos = endPoint->getCenterScenePos();
+        m_savedEndPinType = endPoint->getPinType();
+        m_hasEndPos = true;
+        endPoint = nullptr;
+    }
+
+    // Broken connection becomes undefined logic state
+    setLogicValue(-1);
+
+    // Recalculate path using saved positions
+    updatePath();
 }
 
 void Wire::setEndPoint(Point *end) {
@@ -42,6 +74,9 @@ void Wire::setEndPoint(Point *end) {
     endPoint = end;
     if (endPoint) {
         endPoint->addWire(this);
+        m_savedEndPos = endPoint->getCenterScenePos();
+        m_savedEndPinType = endPoint->getPinType();
+        m_hasEndPos = true;
         m_isPreview = false;
     }
     updatePath();
@@ -73,23 +108,46 @@ void Wire::updatePath() {
 void Wire::calculateManhattanPath() {
     m_pathPoints.clear();
 
-    if (!startPoint) {
+    // Determine scene positions — use saved positions for destroyed endpoints
+    QPointF startScene, endScene;
+    PinType startType, endType;
+
+    if (startPoint) {
+        startScene = startPoint->getCenterScenePos();
+        startType = startPoint->getPinType();
+        m_savedStartPos = startScene;
+        m_savedStartPinType = startType;
+        m_hasStartPos = true;
+    } else if (m_hasStartPos) {
+        startScene = m_savedStartPos;
+        startType = m_savedStartPinType;
+    } else {
         m_cachedBoundingRect = QRectF();
         return;
     }
 
-    QPointF startScene = startPoint->getCenterScenePos();
-    QPointF endScene = (endPoint != nullptr) ? endPoint->getCenterScenePos() : m_previewPos;
+    if (endPoint) {
+        endScene = endPoint->getCenterScenePos();
+        endType = endPoint->getPinType();
+        m_savedEndPos = endScene;
+        m_savedEndPinType = endType;
+        m_hasEndPos = true;
+    } else if (m_isPreview) {
+        endScene = m_previewPos;
+        endType = PinType::Input;
+    } else if (m_hasEndPos) {
+        endScene = m_savedEndPos;
+        endType = m_savedEndPinType;
+    } else {
+        m_cachedBoundingRect = QRectF();
+        return;
+    }
 
     // Convert scene coordinates to local item coordinates
     QPointF p1 = mapFromScene(startScene);
     QPointF p2 = mapFromScene(endScene);
 
     m_pathPoints.append(p1);
-
-    // Determine stub directions based on pin types
-    PinType startType = startPoint->getPinType();
-    PinType endType = (endPoint != nullptr) ? endPoint->getPinType() : PinType::Input;
 
     // Input pins extend LEFT (-25px); Output/Standalone pins extend RIGHT (+25px)
     qreal startStubDx = (startType == PinType::Input) ? -25.0 : 25.0;

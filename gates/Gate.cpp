@@ -54,7 +54,7 @@ QVariant Gate::itemChange(GraphicsItemChange change, const QVariant &value) {
     }
   }
 
-  if (change == ItemPositionHasChanged || change == ItemTransformHasChanged) {
+  if (change == ItemPositionHasChanged || change == ItemTransformHasChanged || change == ItemScaleHasChanged) {
     // Update all connected wires on input pins
     for (Point *pin : m_inputPins) {
       for (Wire *wire : pin->getWires()) {

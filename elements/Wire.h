@@ -5,8 +5,7 @@
 #include <QPainterPath>
 #include <QVector>
 #include <QPointF>
-
-class Point;
+#include "Point.h"
 
 class Wire : public QGraphicsItem {
 public:
@@ -31,6 +30,10 @@ public:
         }
     }
 
+    // Safely detach from a Point that is being destroyed.
+    // Saves the last known position so the wire can still draw itself.
+    void detachPoint(Point *point);
+
 protected:
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -48,6 +51,16 @@ private:
     QRectF m_cachedBoundingRect;
 
     int m_logicValue = -1; // -1: Undefined, 0: Low, 1: High
+
+    // Saved positions for endpoints that have been destroyed.
+    // When a Point is deleted, the wire remembers where it was so it can
+    // still draw itself in the correct location.
+    QPointF m_savedStartPos;
+    QPointF m_savedEndPos;
+    PinType m_savedStartPinType = PinType::Standalone;
+    PinType m_savedEndPinType = PinType::Input;
+    bool m_hasStartPos = false;
+    bool m_hasEndPos = false;
 };
 
 #endif

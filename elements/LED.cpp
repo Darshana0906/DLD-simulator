@@ -11,7 +11,7 @@
 #include <QPointF>
 #include <QRectF>
 
-LED::LED(QGraphicsItem *parent) : QGraphicsItem(parent), state(true) {
+LED::LED(QGraphicsItem *parent) : QGraphicsItem(parent), state(false) {
   setFlag(QGraphicsItem::ItemIsMovable);
   setFlag(QGraphicsItem::ItemIsSelectable);
   setFlag(QGraphicsItem::ItemSendsGeometryChanges);
@@ -127,7 +127,7 @@ QVariant LED::itemChange(GraphicsItemChange change, const QVariant &value) {
     }
   }
 
-  if ((change == ItemPositionHasChanged || change == ItemTransformHasChanged) &&
+  if ((change == ItemPositionHasChanged || change == ItemTransformHasChanged || change == ItemScaleHasChanged) &&
       inputPoint) {
     for (Wire *wire : inputPoint->getWires()) {
       wire->updatePath();

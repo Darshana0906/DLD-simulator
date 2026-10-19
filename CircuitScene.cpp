@@ -3,6 +3,9 @@
 #include "overlapping.h"
 #include "elements/Point.h"
 #include "elements/Wire.h"
+#include "elements/Input.h"
+#include "elements/LED.h"
+#include "gates/Gate.h"
 #include "logic/CircuitAdapter.h"
 #include <QPainter>
 #include <QLineF>
@@ -99,6 +102,65 @@ void CircuitScene::onPointClicked(Point *point) {
         // Step 2: Connect to target pin
         Point *start = m_wireStartPoint;
 
+        QGraphicsItem *ownerStart = start->parentItem() ? start->parentItem() : start->topLevelItem();
+        QGraphicsItem *ownerEnd   = point->parentItem() ? point->parentItem() : point->topLevelItem();
+
+        bool startIsOutput = false;
+        bool endIsOutput = false;
+
+        if (m_adapter) {
+            int idStart = -1, idEnd = -1;
+            int pinIdxStart = 0, pinIdxEnd = 0;
+            bool okStart = m_adapter->getPinInfo(start, idStart, startIsOutput, pinIdxStart);
+            bool okEnd   = m_adapter->getPinInfo(point, idEnd, endIsOutput, pinIdxEnd);
+            if (!okStart) startIsOutput = (start->getPinType() == PinType::Output);
+            if (!okEnd)   endIsOutput   = (point->getPinType() == PinType::Output);
+        } else {
+            startIsOutput = (start->getPinType() == PinType::Output);
+            endIsOutput   = (point->getPinType() == PinType::Output);
+        }
+
+        // Rule 1: Output-to-Output is forbidden
+        if (startIsOutput && endIsOutput) {
+            clearWirePlacement();
+            bool hasGate = (dynamic_cast<Gate*>(ownerStart) || dynamic_cast<Gate*>(ownerEnd));
+            bool hasInput = (dynamic_cast<Input*>(ownerStart) || dynamic_cast<Input*>(ownerEnd));
+            if (hasGate && hasInput) {
+                emit errorMessage("Cannot connect Switch / GND / Constant to the output of a gate! Both are outputs.");
+            } else if (hasGate) {
+                emit errorMessage("Cannot connect two gate outputs together!");
+            } else {
+                emit errorMessage("Cannot connect two output pins together!");
+            }
+            emit placementCancelled();
+            return;
+        }
+
+        // Rule 2: Input-to-Input is forbidden
+        if (!startIsOutput && !endIsOutput) {
+            clearWirePlacement();
+            bool hasGate = (dynamic_cast<Gate*>(ownerStart) || dynamic_cast<Gate*>(ownerEnd));
+            bool hasBulb = (dynamic_cast<LED*>(ownerStart) || dynamic_cast<LED*>(ownerEnd));
+            if (hasGate && hasBulb) {
+                emit errorMessage("Cannot connect Bulb (LED) to the input of a gate! Both are inputs.");
+            } else if (hasGate) {
+                emit errorMessage("Cannot connect two gate inputs directly together!");
+            } else {
+                emit errorMessage("Cannot connect two input pins together!");
+            }
+            emit placementCancelled();
+            return;
+        }
+
+        // Rule 3: An input pin can only receive one driving wire
+        Point *inputPin = startIsOutput ? point : start;
+        if (!inputPin->getWires().isEmpty()) {
+            clearWirePlacement();
+            emit errorMessage("This input pin already has a wire connected to it!");
+            emit placementCancelled();
+            return;
+        }
+
         clearWirePlacement(); // Clears draft wire and resets start pin state
 
         // Create permanent Manhattan Wire between start pin and target pin
@@ -140,6 +202,13 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
 
     if (m_activeSelectionBox && (m_activeSelectionBox == item || m_activeSelectionBox->parentItem() == item)) {
         clearSelectionBox();
+    }
+
+    if (m_hoveredPin && (m_hoveredPin == item || m_hoveredPin->topLevelItem() == item->topLevelItem())) {
+        m_hoveredPin = nullptr;
+    }
+    if (m_wireStartPoint && (m_wireStartPoint == item || m_wireStartPoint->topLevelItem() == item->topLevelItem())) {
+        clearWirePlacement();
     }
 
     if (m_adapter) {
