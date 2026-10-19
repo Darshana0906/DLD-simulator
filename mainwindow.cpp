@@ -77,6 +77,18 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::toggleFullScreenMode);
   addAction(fullScreenAction);
 
+  // Escape shortcut (Esc): cancel placement or clear selection regardless of canvas focus
+  QAction *escapeAction = new QAction(this);
+  escapeAction->setShortcut(QKeySequence(Qt::Key_Escape));
+  connect(escapeAction, &QAction::triggered, this, [this]() {
+    if (scene->isPlacementMode()) {
+      cancelPlacement();
+    } else if (!scene->selectedItems().isEmpty()) {
+      scene->clearSelection();
+    }
+  });
+  addAction(escapeAction);
+
   QToolBar *toolbar = new QToolBar("Toolbar", this);
   addToolBar(Qt::LeftToolBarArea, toolbar);
   toolbar->setIconSize(QSize(96, 64));
@@ -206,6 +218,19 @@ MainWindow::MainWindow(QWidget *parent)
   ledButton->setFixedSize(96, 64);
   toolbar->addWidget(ledButton);
 
+  toolButtons[ElementType::AndGate] = andButton;
+  toolButtons[ElementType::OrGate] = orButton;
+  toolButtons[ElementType::NotGate] = notButton;
+  toolButtons[ElementType::NandGate] = nandButton;
+  toolButtons[ElementType::NorGate] = norButton;
+  toolButtons[ElementType::XorGate] = xorButton;
+  toolButtons[ElementType::XnorGate] = xnorButton;
+  toolButtons[ElementType::Wire] = wireButton;
+  toolButtons[ElementType::GND] = gndButton;
+  toolButtons[ElementType::Const1] = constantButton;
+  toolButtons[ElementType::Switch] = switchButton;
+  toolButtons[ElementType::LED] = ledButton;
+
   // Simulation Section in left toolbar
   QLabel *simlabel = new QLabel("SIMULATION");
   simlabel->setAlignment(Qt::AlignCenter);
@@ -287,6 +312,7 @@ MainWindow::~MainWindow() { delete ui; }
 void MainWindow::setPlacementTool(ElementType type,
                                   const QString &elementName) {
   currentTool = type;
+  updateToolButtonHighlights(type);
   if (type == ElementType::Wire) {
     scene->setWireToolActive(true);
     scene->setPlacementMode(false);
@@ -305,9 +331,7 @@ void MainWindow::setPlacementTool(ElementType type,
 
 void MainWindow::onSceneClicked(const QPointF &pos) {
   if (currentTool != ElementType::None && currentTool != ElementType::Wire) {
-    if (placeElement(currentTool, pos)) {
-      cancelPlacement();
-    } else {
+    if (!placeElement(currentTool, pos)) {
       statusBar()->showMessage(
           "Cannot place here: Overlaps an existing component!", 3000);
       QMessageBox::warning(
@@ -319,10 +343,26 @@ void MainWindow::onSceneClicked(const QPointF &pos) {
 
 void MainWindow::cancelPlacement() {
   currentTool = ElementType::None;
+  updateToolButtonHighlights(ElementType::None);
   scene->setWireToolActive(false);
   scene->setPlacementMode(false);
   ui->graphicsView->applyCursor();
   statusBar()->clearMessage();
+}
+
+void MainWindow::updateToolButtonHighlights(ElementType activeType) {
+  for (auto it = toolButtons.begin(); it != toolButtons.end(); ++it) {
+    if (it.key() == activeType) {
+      it.value()->setStyleSheet(
+          "QToolButton {"
+          "  border: 2px solid #2196F3;"
+          "  background-color: #E3F2FD;"
+          "  border-radius: 4px;"
+          "}");
+    } else {
+      it.value()->setStyleSheet("");
+    }
+  }
 }
 
 void MainWindow::toggleFullScreenMode() {
