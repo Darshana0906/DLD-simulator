@@ -8,7 +8,8 @@ Point::Point(QGraphicsItem *parent, bool movable, PinType type)
     : QGraphicsItem(parent), m_pinType(type) {
     if (movable)
         setFlag(QGraphicsItem::ItemIsMovable);
-    setFlag(QGraphicsItem::ItemIsSelectable);
+    if (!parent)
+        setFlag(QGraphicsItem::ItemIsSelectable);
     setAcceptHoverEvents(true);
     setZValue(100); // Pins render above gates
 }
@@ -106,6 +107,11 @@ void Point::mousePressEvent(QGraphicsSceneMouseEvent *event) {
         // Notify scene of pin selection
         cs->onPointClicked(this);
         event->accept();
+        return;
+    }
+    if (parentItem()) {
+        // Let the parent gate/component handle selection and movement
+        event->ignore();
         return;
     }
     QGraphicsItem::mousePressEvent(event);

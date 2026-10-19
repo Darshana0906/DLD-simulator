@@ -116,9 +116,6 @@ void CircuitScene::onPointClicked(Point *point) {
         if (m_adapter) {
             m_adapter->onWireConnected(wire);
         }
-
-        // Automatically exit Wire tool mode after completing 2-pin connection
-        emit placementCancelled();
     }
 }
 
@@ -209,6 +206,38 @@ void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
         }
     }
 
+    if (event->button() == Qt::LeftButton) {
+        QGraphicsItem *item = itemAt(event->scenePos(), QTransform());
+
+        // 1. Clicked on empty canvas: keep current item selected
+        if (!item) {
+            event->accept();
+            return;
+        }
+
+        // 2. Identify the target circuit element (wires are top-level, pins have a parent component)
+        QGraphicsItem *targetItem = item;
+        if (m_activeSelectionBox && item == m_activeSelectionBox) {
+            targetItem = m_activeSelectionBox->parentItem();
+        } else if (item->topLevelItem()) {
+            targetItem = item->topLevelItem();
+        }
+
+        if (targetItem && (targetItem->flags() & QGraphicsItem::ItemIsSelectable)) {
+            // Forward event to allow dragging / item interaction
+            QGraphicsScene::mousePressEvent(event);
+
+            // Enforce single-item selection: deselect all other items and select targetItem
+            for (QGraphicsItem *sel : selectedItems()) {
+                if (sel != targetItem) {
+                    sel->setSelected(false);
+                }
+            }
+            targetItem->setSelected(true);
+            return;
+        }
+    }
+
     QGraphicsScene::mousePressEvent(event);
 }
 
@@ -247,6 +276,11 @@ void CircuitScene::keyPressEvent(QKeyEvent *event) {
         }
         if (m_wireToolActive || m_placementMode) {
             emit placementCancelled();
+            event->accept();
+            return;
+        }
+        if (!selectedItems().isEmpty()) {
+            clearSelection();
             event->accept();
             return;
         }
