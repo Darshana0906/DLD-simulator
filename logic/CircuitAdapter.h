@@ -56,6 +56,10 @@ public:
 
     // Pin resolution (bridges visual Point* pins to NodeID and pinIndex)
     bool getPinInfo(Point *pin, int &nodeId, bool &isOutput, int &pinIndex) const;
+    Point* getPin(int nodeId, bool isOutput, int pinIndex) const;
+
+    // Reset all internal mappings, DAG nodes, and edges
+    void clear();
 
     // Synchronize all components from scene (Gates, Inputs, LEDs)
     void syncSceneItems();

@@ -25,6 +25,7 @@ public:
     bool isWireToolActive() const { return m_wireToolActive; }
 
     void deleteItem(QGraphicsItem *item);
+    void clearCircuit();
 
     void onPointClicked(Point *point);
     void clearWirePlacement();
