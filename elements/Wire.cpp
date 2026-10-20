@@ -171,6 +171,10 @@ static bool isPathBlocked(const QVector<QPointF> &path, const QVector<QRectF> &o
 static QVector<QPointF> simplifyCollinear(const QVector<QPointF> &pts) {
     QVector<QPointF> res;
     for (int i = 0; i < pts.size(); ++i) {
+        if (!res.isEmpty() && std::abs(res.last().x() - pts[i].x()) < 0.5 &&
+            std::abs(res.last().y() - pts[i].y()) < 0.5) {
+            continue;
+        }
         if (res.size() >= 2) {
             QPointF pA = res[res.size() - 2];
             QPointF pB = res.last();
@@ -225,9 +229,17 @@ void Wire::calculateManhattanPath() {
         return;
     }
 
-    // Input pins extend LEFT (-25px); Output/Standalone pins extend RIGHT (+25px)
-    qreal startStubDx = (startType == PinType::Input) ? -25.0 : 25.0;
-    qreal endStubDx = (endType == PinType::Output) ? 25.0 : -25.0;
+    // Adaptive stubs: Output/Standalone pins extend RIGHT (+20px), Input pins extend LEFT (-20px)
+    qreal startStubDx = (startType == PinType::Input) ? -20.0 : 20.0;
+    qreal endStubDx = (endType == PinType::Output) ? 20.0 : -20.0;
+
+    // Prevent stubs from overshooting each other when connecting forward pins that are close together
+    if (startStubDx > 0 && endStubDx < 0 && endScene.x() > startScene.x()) {
+        qreal spanX = endScene.x() - startScene.x();
+        qreal maxStub = std::max(0.0, spanX / 2.0);
+        startStubDx = std::min(startStubDx, maxStub);
+        endStubDx = -std::min(std::abs(endStubDx), maxStub);
+    }
 
     QPointF stub1(startScene.x() + startStubDx, startScene.y());
     QPointF stub2(endScene.x() + endStubDx, endScene.y());
@@ -255,35 +267,56 @@ void Wire::calculateManhattanPath() {
         }
     }
 
-    // Candidate default paths
+    // Candidate default paths (evaluated in priority order for natural schematic layout)
     QVector<QPointF> chosenPath;
 
-    // Check simple paths first
-    if (qFuzzyCompare(stub1.y(), stub2.y())) {
-        bool forwardH = (startStubDx > 0 && stub2.x() >= stub1.x()) || (startStubDx < 0 && stub2.x() <= stub1.x());
+    // 1. Straight horizontal line (if pins share the same Y level and flow forward)
+    if (qFuzzyCompare(startScene.y(), endScene.y())) {
+        bool forwardH = (startStubDx >= 0 && endScene.x() >= startScene.x()) ||
+                        (startStubDx <= 0 && endScene.x() <= startScene.x());
         if (forwardH) {
-            QVector<QPointF> cand = {stub1, stub2};
+            QVector<QPointF> cand = {startScene, endScene};
             if (!isPathBlocked(cand, obstacles)) {
                 chosenPath = cand;
             }
         }
     }
 
+    // 2. Standard Output -> Input left-to-right S/Z-shape with midX
+    if (chosenPath.isEmpty() && startStubDx > 0 && endStubDx < 0 && endScene.x() > startScene.x() + 10.0) {
+        qreal midX = (startScene.x() + endScene.x()) / 2.0;
+        QVector<QPointF> cand = {
+            startScene,
+            QPointF(midX, startScene.y()),
+            QPointF(midX, endScene.y()),
+            endScene
+        };
+        if (!isPathBlocked(cand, obstacles)) {
+            chosenPath = cand;
+        }
+    }
+
+    // 3. Vertical-first L-shape (go vertical from start, then horizontal into target)
     if (chosenPath.isEmpty()) {
-        if (startStubDx > 0 && endStubDx < 0 && stub1.x() < stub2.x()) {
-            // Standard Output -> Input left-to-right flow
-            qreal midX = (stub1.x() + stub2.x()) / 2.0;
-            QVector<QPointF> cand = {stub1, QPointF(midX, stub1.y()), QPointF(midX, stub2.y()), stub2};
-            if (!isPathBlocked(cand, obstacles)) {
-                chosenPath = cand;
-            }
-        } else if (startStubDx < 0 && endStubDx < 0 && stub1.x() < stub2.x()) {
-            // Input -> Input flow
-            qreal midX = std::min(stub1.x(), stub2.x()) - 20.0;
-            QVector<QPointF> cand = {stub1, QPointF(midX, stub1.y()), QPointF(midX, stub2.y()), stub2};
-            if (!isPathBlocked(cand, obstacles)) {
-                chosenPath = cand;
-            }
+        QVector<QPointF> cand = {
+            startScene,
+            QPointF(startScene.x(), endScene.y()),
+            endScene
+        };
+        if (!isPathBlocked(cand, obstacles)) {
+            chosenPath = cand;
+        }
+    }
+
+    // 4. Horizontal-first L-shape (go horizontal from start, then vertical into target)
+    if (chosenPath.isEmpty()) {
+        QVector<QPointF> cand = {
+            startScene,
+            QPointF(endScene.x(), startScene.y()),
+            endScene
+        };
+        if (!isPathBlocked(cand, obstacles)) {
+            chosenPath = cand;
         }
     }
 
@@ -445,21 +478,24 @@ void Wire::calculateManhattanPath() {
 
     // Default fallback if pathfinding was completely boxed in
     if (chosenPath.isEmpty()) {
-        qreal midX = (stub1.x() + stub2.x()) / 2.0;
-        chosenPath = {stub1, QPointF(midX, stub1.y()), QPointF(midX, stub2.y()), stub2};
+        qreal midX = (startScene.x() + endScene.x()) / 2.0;
+        chosenPath = {startScene, QPointF(midX, startScene.y()), QPointF(midX, endScene.y()), endScene};
     }
 
-    // Assemble final route
-    if (chosenPath.isEmpty() || chosenPath.first() != stub1) {
-        chosenPath.prepend(stub1);
+    // Assemble final route cleanly without redundant or loop-back points
+    if (chosenPath.isEmpty() || chosenPath.first() != startScene) {
+        if (!chosenPath.isEmpty() && chosenPath.first() != stub1 && startScene != stub1) {
+            chosenPath.prepend(stub1);
+        }
+        chosenPath.prepend(startScene);
     }
-    if (chosenPath.last() != stub2) {
-        chosenPath.append(stub2);
+    if (chosenPath.last() != endScene) {
+        if (chosenPath.last() != stub2 && endScene != stub2) {
+            chosenPath.append(stub2);
+        }
+        chosenPath.append(endScene);
     }
 
-    chosenPath = simplifyCollinear(chosenPath);
-    chosenPath.prepend(startScene);
-    chosenPath.append(endScene);
     chosenPath = simplifyCollinear(chosenPath);
 
     // Convert from scene coordinates to wire local item coordinates
