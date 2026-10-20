@@ -1,6 +1,5 @@
 #include "overlapping.h"
 #include "SelectionBox.h"
-#include "GroupSelectionBox.h"
 #include "elements/Input.h"
 #include "elements/LED.h"
 #include "elements/Point.h"
@@ -18,8 +17,6 @@ bool isSolidComponent(QGraphicsItem *item) {
   if (dynamic_cast<Point *>(item))
     return false;
   if (dynamic_cast<SelectionBox *>(item))
-    return false;
-  if (dynamic_cast<GroupSelectionBox *>(item))
     return false;
 
   // Gates and input/output components are solid components
@@ -91,15 +88,12 @@ bool canMoveItem(QGraphicsItem *movingItem, const QRectF &candidateSceneRect) {
   if (!isSolidComponent(movingItem))
     return true;
 
+  // Find pins attached to movingItem so connected wires aren't falsely flagged
+  // at their pin connection
   QGraphicsItem *topItem = movingItem->topLevelItem();
 
   for (QGraphicsItem *item : movingItem->scene()->items()) {
     if (!item || item == movingItem || item->topLevelItem() == topItem)
-      continue;
-
-    // GROUP MOVE: both items are selected -> moving together, never collide
-    QGraphicsItem *itemTop = item->topLevelItem() ? item->topLevelItem() : item;
-    if (movingItem->isSelected() && (item->isSelected() || itemTop->isSelected()))
       continue;
 
     if (isSolidComponent(item)) {
@@ -113,22 +107,6 @@ bool canMoveItem(QGraphicsItem *movingItem, const QRectF &candidateSceneRect) {
         continue;
       if (wire->getEndPoint() && wire->getEndPoint()->topLevelItem() == topItem)
         continue;
-
-      // Skip wires that are themselves selected (part of the moving group)
-      if (wire->isSelected())
-        continue;
-
-      // Skip wires whose endpoints belong to co-selected components
-      if (movingItem->isSelected()) {
-        bool startSel = wire->getStartPoint() &&
-                        wire->getStartPoint()->topLevelItem() &&
-                        wire->getStartPoint()->topLevelItem()->isSelected();
-        bool endSel   = wire->getEndPoint() &&
-                        wire->getEndPoint()->topLevelItem() &&
-                        wire->getEndPoint()->topLevelItem()->isSelected();
-        if (startSel || endSel)
-          continue;
-      }
 
       QVector<QPointF> segments = wire->getSegments();
       for (int i = 0; i + 1 < segments.size(); ++i) {
