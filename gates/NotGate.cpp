@@ -1,5 +1,7 @@
 #include "NotGate.h"
 #include <QPainter>
+#include <QMessageBox>
+#include <QApplication>
 
 NotGate::NotGate(QGraphicsItem *parent) : Gate(parent) {
     addInputPin(-29, 26);
@@ -22,4 +24,21 @@ void NotGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget
     painter->drawPath(getPath());
     painter->drawLine(-20, 30, 0, 30);
     painter->drawLine(90, 30, 100, 30);
+}
+
+void NotGate::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) {
+    QMessageBox msgBox(QApplication::activeWindow());
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setWindowTitle("Invalid Operation");
+    msgBox.setText("A NOT Gate (inverter) can have only 1 input!");
+    
+    // Set custom size and font using CSS:
+    msgBox.setStyleSheet(
+        "#qt_msgbox_label { font-size: 14px; padding: 10px; }"
+        "QPushButton { font-size: 13px; min-width: 75px; min-height: 26px; margin: 8px; }"
+    );
+
+    
+    msgBox.exec();
+    event->accept();
 }

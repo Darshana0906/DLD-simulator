@@ -12,5 +12,7 @@ protected:
     void paint(QPainter *painter,
                const QStyleOptionGraphicsItem *option,
                QWidget *widget = nullptr) override;
+
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
 };
 #endif
