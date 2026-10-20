@@ -221,6 +221,15 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
     delete item;
 }
 
+void CircuitScene::clearCircuit() {
+    clearWirePlacement();
+    clearSelectionBox();
+    clear();
+    if (m_adapter) {
+        m_adapter->clear();
+    }
+}
+
 void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     if (event->button() == Qt::RightButton) {
         if (m_wireStartPoint) {

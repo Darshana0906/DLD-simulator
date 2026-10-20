@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include "CircuitScene.h"
+#include "CircuitSerializer.h"
 #include "ZoomGraphicsView.h"
 #include "elements/Const1.h"
 #include "elements/GND.h"
@@ -18,9 +19,13 @@
 #include "logic/CircuitAdapter.h"
 #include "overlapping.h"
 #include <QAction>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QIcon>
 #include <QKeySequence>
 #include <QLabel>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSize>
@@ -32,7 +37,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
-  setWindowTitle("DLD Simulator");
+  updateWindowTitle();
 
   scene = new CircuitScene(this);
   scene->setSceneRect(0, 0, 4000, 3000);
@@ -249,10 +254,49 @@ MainWindow::MainWindow(QWidget *parent)
   toolbar->addWidget(simButton);
   connect(simButton, &QPushButton::clicked, this, &MainWindow::runSimulation);
 
+  // Menu Bar: File Menu
+  QMenu *fileMenu = menuBar()->addMenu("&File");
+
+  QAction *newAction = new QAction("📄  New Circuit", this);
+  newAction->setShortcut(QKeySequence::New);
+  newAction->setToolTip("Start a new blank circuit (Ctrl+N)");
+  fileMenu->addAction(newAction);
+  connect(newAction, &QAction::triggered, this, &MainWindow::newCircuit);
+
+  QAction *openAction = new QAction("📂  Open Circuit...", this);
+  openAction->setShortcut(QKeySequence::Open);
+  openAction->setToolTip("Open a circuit file (.svg, .dld, .json) (Ctrl+O)");
+  fileMenu->addAction(openAction);
+  connect(openAction, &QAction::triggered, this, &MainWindow::openCircuit);
+
+  QAction *saveAction = new QAction("💾  Save Circuit", this);
+  saveAction->setShortcut(QKeySequence::Save);
+  saveAction->setToolTip("Save circuit to editable vector SVG (Ctrl+S)");
+  fileMenu->addAction(saveAction);
+  connect(saveAction, &QAction::triggered, this, &MainWindow::saveCircuit);
+
+  QAction *saveAsAction = new QAction("💾  Save Circuit As...", this);
+  saveAsAction->setShortcut(QKeySequence::SaveAs);
+  saveAsAction->setToolTip("Save circuit with a new filename (Ctrl+Shift+S)");
+  fileMenu->addAction(saveAsAction);
+  connect(saveAsAction, &QAction::triggered, this, &MainWindow::saveCircuitAs);
+
+  fileMenu->addSeparator();
+
+  QAction *exitAction = new QAction("🚪  Exit", this);
+  exitAction->setShortcut(QKeySequence::Quit);
+  fileMenu->addAction(exitAction);
+  connect(exitAction, &QAction::triggered, this, &QWidget::close);
+
   // Top Controls Toolbar
   QToolBar *topControlBar = new QToolBar("Circuit Controls", this);
   topControlBar->setMovable(false);
   addToolBar(Qt::TopToolBarArea, topControlBar);
+
+  topControlBar->addAction(newAction);
+  topControlBar->addAction(openAction);
+  topControlBar->addAction(saveAction);
+  topControlBar->addSeparator();
 
   QAction *simulateAction = new QAction("▶  Simulate Circuit", this);
   simulateAction->setShortcut(QKeySequence(Qt::Key_F5));
@@ -499,10 +543,92 @@ void MainWindow::clearCircuit() {
           this, "Clear Circuit",
           "Are you sure you want to clear the entire circuit?") ==
       QMessageBox::Yes) {
-    scene->clear();
-    if (scene->getAdapter()) {
-      scene->getAdapter()->extractWires();
-    }
+    scene->clearCircuit();
+    currentFilePath.clear();
+    updateWindowTitle();
     statusBar()->showMessage("Circuit cleared.", 2500);
   }
 }
+
+void MainWindow::updateWindowTitle() {
+  if (currentFilePath.isEmpty()) {
+    setWindowTitle("DLD Simulator - Untitled");
+  } else {
+    setWindowTitle(QString("DLD Simulator - %1").arg(QFileInfo(currentFilePath).fileName()));
+  }
+}
+
+void MainWindow::newCircuit() {
+  if (!scene->items().isEmpty()) {
+    if (QMessageBox::question(
+            this, "New Circuit",
+            "Do you want to create a new circuit? Any unsaved changes will be lost.") !=
+        QMessageBox::Yes) {
+      return;
+    }
+  }
+  scene->clearCircuit();
+  currentFilePath.clear();
+  updateWindowTitle();
+  statusBar()->showMessage("New circuit created.", 2500);
+}
+
+void MainWindow::openCircuit() {
+  QString fileName = QFileDialog::getOpenFileName(
+      this, "Open Circuit File", QString(),
+      "Editable Vector Circuit (*.svg);;All Supported Files (*.svg *.dld *.json);;All Files (*)");
+  if (fileName.isEmpty())
+    return;
+
+  QString errorMsg;
+  if (CircuitSerializer::loadFromFile(fileName, scene, &errorMsg)) {
+    currentFilePath = fileName;
+    updateWindowTitle();
+    statusBar()->showMessage(QString("Loaded circuit from %1").arg(QFileInfo(fileName).fileName()), 3500);
+  } else {
+    QMessageBox::critical(this, "Error Opening Circuit",
+                          QString("Failed to load circuit:\n%1").arg(errorMsg));
+  }
+}
+
+void MainWindow::saveCircuit() {
+  if (currentFilePath.isEmpty()) {
+    saveCircuitAs();
+  } else {
+    QString errorMsg;
+    if (CircuitSerializer::saveToFile(currentFilePath, scene, &errorMsg)) {
+      updateWindowTitle();
+      statusBar()->showMessage(QString("Saved circuit to %1").arg(QFileInfo(currentFilePath).fileName()), 3500);
+    } else {
+      QMessageBox::critical(this, "Error Saving Circuit",
+                            QString("Failed to save circuit:\n%1").arg(errorMsg));
+    }
+  }
+}
+
+void MainWindow::saveCircuitAs() {
+  QString defaultPath = currentFilePath.isEmpty() ? "circuit.svg" : currentFilePath;
+  QString selectedFilter;
+  QString fileName = QFileDialog::getSaveFileName(
+      this, "Save Circuit As", defaultPath,
+      "Editable Vector Circuit (*.svg);;All Files (*)",
+      &selectedFilter);
+  if (fileName.isEmpty())
+    return;
+
+  // Append .svg extension if none provided
+  if (QFileInfo(fileName).suffix().isEmpty()) {
+    fileName += ".svg";
+  }
+
+  QString errorMsg;
+  if (CircuitSerializer::saveToFile(fileName, scene, &errorMsg)) {
+    currentFilePath = fileName;
+    updateWindowTitle();
+    statusBar()->showMessage(QString("Saved circuit to %1").arg(QFileInfo(fileName).fileName()), 3500);
+  } else {
+    QMessageBox::critical(this, "Error Saving Circuit",
+                          QString("Failed to save circuit:\n%1").arg(errorMsg));
+  }
+}
+
