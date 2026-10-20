@@ -285,46 +285,12 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
     delete item;
 }
 
-void CircuitScene::deleteSelectedItems() {
-    // Snapshot selected items BEFORE any deletion
-    QList<QGraphicsItem *> sel = selectedItems();
-    if (sel.isEmpty()) return;
-
-    clearGroupSelectionBox();
+void CircuitScene::clearCircuit() {
+    clearWirePlacement();
     clearSelectionBox();
-
-    // Separate components (gates, inputs, LEDs) from wires
-    QList<QGraphicsItem *> components;
-    QList<Wire *> wires;
-
-    for (QGraphicsItem *item : sel) {
-        if (!item) continue;
-        // Always work on top-level items
-        QGraphicsItem *top = item->topLevelItem() ? item->topLevelItem() : item;
-        if (Wire *w = dynamic_cast<Wire *>(top)) {
-            if (!wires.contains(w)) wires.append(w);
-        } else if (isSolidComponent(top)) {
-            if (!components.contains(top)) components.append(top);
-        }
-    }
-
-    // 1. Delete solid components first (deleteItem also deletes their attached wires)
-    for (QGraphicsItem *comp : components) {
-        if (comp && items().contains(comp)) {
-            deleteItem(comp);
-        }
-    }
-
-    // 2. Delete any standalone selected wires not already deleted above
-    for (Wire *w : wires) {
-        if (w && items().contains(w)) {
-            deleteItem(w);
-        }
-    }
-
+    clear();
     if (m_adapter) {
-        m_adapter->resetOutputsToNeutral();
-        emit m_adapter->simulationInvalidated();
+        m_adapter->clear();
     }
 }
 

@@ -41,16 +41,22 @@ private slots:
     void toggleFullScreenMode();
     void runSimulation();
     void clearCircuit();
+    void newCircuit();
+    void openCircuit();
+    void saveCircuit();
+    void saveCircuitAs();
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);
     bool placeElement(ElementType type, const QPointF &pos);
     void updateToolButtonHighlights(ElementType activeType);
+    void updateWindowTitle();
 
     Ui::MainWindow *ui;
     CircuitScene *scene;
     ElementType currentTool = ElementType::None;
     QMap<ElementType, class QToolButton*> toolButtons;
+    QString currentFilePath;
 };
 
 #endif // MAINWINDOW_H

@@ -215,6 +215,42 @@ bool CircuitAdapter::getPinInfo(Point *pin, int &nodeId, bool &isOutput, int &pi
     return false;
 }
 
+Point* CircuitAdapter::getPin(int nodeId, bool isOutput, int pinIndex) const {
+    QGraphicsItem *item = getItem(nodeId);
+    if (!item) return nullptr;
+
+    if (Gate *gate = dynamic_cast<Gate*>(item)) {
+        if (isOutput) {
+            return (pinIndex == 0) ? gate->getOutputPin() : nullptr;
+        } else {
+            const auto &inPins = gate->getInputPins();
+            if (pinIndex >= 0 && pinIndex < inPins.size()) {
+                return inPins[pinIndex];
+            }
+        }
+    } else if (Input *inp = dynamic_cast<Input*>(item)) {
+        if (isOutput && pinIndex == 0) {
+            return inp->getOutputPoint();
+        }
+    } else if (LED *led = dynamic_cast<LED*>(item)) {
+        if (!isOutput && pinIndex == 0) {
+            return led->getInputPoint();
+        }
+    }
+    return nullptr;
+}
+
+void CircuitAdapter::clear() {
+    m_wireToEdge.clear();
+    m_edges.clear();
+    m_dag.clear();
+    m_nodes.clear();
+    m_idToItem.clear();
+    m_itemToId.clear();
+    m_nextId = 0;
+    emit simulationInvalidated();
+}
+
 void CircuitAdapter::syncSceneItems() {
     if (!m_scene) return;
 

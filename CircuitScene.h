@@ -27,8 +27,7 @@ public:
 
     // Delete a single item (and its attached wires) cleanly
     void deleteItem(QGraphicsItem *item);
-    // Delete all currently selected items (safe, no double-delete)
-    void deleteSelectedItems();
+    void clearCircuit();
 
     void onPointClicked(Point *point);
     void clearWirePlacement();

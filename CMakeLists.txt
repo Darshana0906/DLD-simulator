@@ -18,6 +18,8 @@ set(PROJECT_SOURCES
         mainwindow.ui
         CircuitScene.h
         CircuitScene.cpp
+        CircuitSerializer.h
+        CircuitSerializer.cpp
         SelectionBox.h
         SelectionBox.cpp
         GroupSelectionBox.h
