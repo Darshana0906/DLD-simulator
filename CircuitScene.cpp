@@ -1,5 +1,6 @@
 #include "CircuitScene.h"
 #include "SelectionBox.h"
+#include "GroupSelectionBox.h"
 #include "overlapping.h"
 #include "elements/Point.h"
 #include "elements/Wire.h"
@@ -21,6 +22,7 @@ CircuitScene::CircuitScene(QObject *parent)
 
 CircuitScene::~CircuitScene() {
     clearWirePlacement();
+    clearGroupSelectionBox();
     clearSelectionBox();
 }
 
@@ -69,6 +71,45 @@ void CircuitScene::clearSelectionBox() {
     if (m_activeSelectionBox) {
         delete m_activeSelectionBox;
         m_activeSelectionBox = nullptr;
+    }
+}
+
+void CircuitScene::clearGroupSelectionBox() {
+    if (m_groupSelectionBox) {
+        if (items().contains(m_groupSelectionBox))
+            removeItem(m_groupSelectionBox);
+        delete m_groupSelectionBox;
+        m_groupSelectionBox = nullptr;
+    }
+}
+
+void CircuitScene::updateGroupSelectionBox() {
+    // Count selected top-level components (excluding wires/points/decorations)
+    QList<QGraphicsItem *> sel = selectedItems();
+    int componentCount = 0;
+    QSet<QGraphicsItem *> seen;
+    for (QGraphicsItem *item : sel) {
+        QGraphicsItem *top = item->topLevelItem() ? item->topLevelItem() : item;
+        if (seen.contains(top)) continue;
+        if (dynamic_cast<Wire *>(top)) continue;
+        if (dynamic_cast<Point *>(top)) continue;
+        if (dynamic_cast<SelectionBox *>(top)) continue;
+        if (dynamic_cast<GroupSelectionBox *>(top)) continue;
+        seen.insert(top);
+        componentCount++;
+    }
+
+    if (componentCount >= 2) {
+        // Create or update the group selection box
+        if (!m_groupSelectionBox) {
+            m_groupSelectionBox = new GroupSelectionBox(this);
+            addItem(m_groupSelectionBox);
+        }
+        if (!m_groupSelectionBox->recalculate()) {
+            clearGroupSelectionBox();
+        }
+    } else {
+        clearGroupSelectionBox();
     }
 }
 
@@ -187,14 +228,18 @@ void CircuitScene::onSelectionChanged() {
     QList<QGraphicsItem *> selected = selectedItems();
     if (selected.size() == 1) {
         QGraphicsItem *target = selected.first();
-        if (!dynamic_cast<Point *>(target) && !dynamic_cast<Wire *>(target) && target != m_activeSelectionBox) {
+        if (!dynamic_cast<Point *>(target) && !dynamic_cast<Wire *>(target) && target != m_activeSelectionBox
+            && !dynamic_cast<GroupSelectionBox *>(target)) {
             m_activeSelectionBox = new SelectionBox(target);
         }
     }
+
+    // Manage group selection box for multi-selection
+    updateGroupSelectionBox();
 }
 
 void CircuitScene::deleteItem(QGraphicsItem *item) {
-    if (!item)
+    if (!item || !items().contains(item))
         return;
 
     if (m_activeSelectionBox && (m_activeSelectionBox == item || m_activeSelectionBox->parentItem() == item)) {
@@ -208,8 +253,27 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
         clearWirePlacement();
     }
 
+    // Collect all wires attached to this item's pins, before removing
+    QList<Wire*> attachedWires;
+    for (QGraphicsItem *child : item->childItems()) {
+        if (Point *pin = dynamic_cast<Point*>(child)) {
+            for (Wire *w : pin->getWires()) {
+                if (w && !attachedWires.contains(w)) {
+                    attachedWires.append(w);
+                }
+            }
+        }
+    }
+    // Delete attached wires first
+    for (Wire *w : attachedWires) {
+        if (w && items().contains(w)) {
+            if (m_adapter) m_adapter->onWireRemoved(w);
+            removeItem(w);
+            delete w;
+        }
+    }
+
     if (m_adapter) {
-        // If it's a wire, remove its edge from the logic graph first
         if (Wire *wire = dynamic_cast<Wire*>(item)) {
             m_adapter->onWireRemoved(wire);
         } else {
@@ -221,83 +285,146 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
     delete item;
 }
 
+void CircuitScene::deleteSelectedItems() {
+    // Snapshot selected items BEFORE any deletion
+    QList<QGraphicsItem *> sel = selectedItems();
+    if (sel.isEmpty()) return;
+
+    clearGroupSelectionBox();
+    clearSelectionBox();
+
+    // Separate components (gates, inputs, LEDs) from wires
+    QList<QGraphicsItem *> components;
+    QList<Wire *> wires;
+
+    for (QGraphicsItem *item : sel) {
+        if (!item) continue;
+        // Always work on top-level items
+        QGraphicsItem *top = item->topLevelItem() ? item->topLevelItem() : item;
+        if (Wire *w = dynamic_cast<Wire *>(top)) {
+            if (!wires.contains(w)) wires.append(w);
+        } else if (isSolidComponent(top)) {
+            if (!components.contains(top)) components.append(top);
+        }
+    }
+
+    // 1. Delete solid components first (deleteItem also deletes their attached wires)
+    for (QGraphicsItem *comp : components) {
+        if (comp && items().contains(comp)) {
+            deleteItem(comp);
+        }
+    }
+
+    // 2. Delete any standalone selected wires not already deleted above
+    for (Wire *w : wires) {
+        if (w && items().contains(w)) {
+            deleteItem(w);
+        }
+    }
+
+    if (m_adapter) {
+        m_adapter->resetOutputsToNeutral();
+        emit m_adapter->simulationInvalidated();
+    }
+}
+
 void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    // ── Right-click: cancel wire / placement, or delete hovered item ────────────
     if (event->button() == Qt::RightButton) {
         if (m_wireStartPoint) {
             clearWirePlacement();
             event->accept();
             return;
         }
-
         if (m_wireToolActive || m_placementMode) {
             emit placementCancelled();
             event->accept();
             return;
         }
+        // Right-click on a selected item → delete the whole selection
+        QGraphicsItem *hitItem = itemAt(event->scenePos(), QTransform());
+        if (hitItem) {
+            if (m_activeSelectionBox && hitItem == m_activeSelectionBox)
+                hitItem = m_activeSelectionBox->parentItem();
+            else
+                hitItem = hitItem->topLevelItem() ? hitItem->topLevelItem() : hitItem;
 
-        QGraphicsItem *itemAtPos = itemAt(event->scenePos(), QTransform());
-        if (itemAtPos) {
-            if (m_activeSelectionBox && itemAtPos == m_activeSelectionBox) {
-                itemAtPos = m_activeSelectionBox->parentItem();
-            }
-
-            if (itemAtPos && itemAtPos->isSelected()) {
-                deleteItem(itemAtPos);
+            if (hitItem && hitItem->isSelected()) {
+                deleteSelectedItems();
                 event->accept();
                 return;
             }
         }
     }
 
-    if (m_wireToolActive) {
-        if (event->button() == Qt::LeftButton) {
-            Point *pin = findPinNear(event->scenePos(), 25.0);
-            if (pin) {
-                onPointClicked(pin);
-            }
-            event->accept();
-            return;
+    // ── Wire tool: click pins ────────────────────────────────────────────────────
+    if (m_wireToolActive && event->button() == Qt::LeftButton) {
+        Point *pin = findPinNear(event->scenePos(), 25.0);
+        if (pin) {
+            onPointClicked(pin);
         }
+        event->accept();
+        return;
     }
 
-    if (m_placementMode) {
-        if (event->button() == Qt::LeftButton) {
-            emit sceneClicked(event->scenePos());
-            event->accept();
-            return;
-        }
+    // ── Placement mode: emit position for item placement ────────────────────────
+    if (m_placementMode && event->button() == Qt::LeftButton) {
+        emit sceneClicked(event->scenePos());
+        event->accept();
+        return;
     }
 
+    // ── Normal (select / move) mode ──────────────────────────────────────────────
     if (event->button() == Qt::LeftButton) {
-        QGraphicsItem *item = itemAt(event->scenePos(), QTransform());
+        QGraphicsItem *hit = itemAt(event->scenePos(), QTransform());
 
-        // 1. Clicked on empty canvas: keep current item selected
-        if (!item) {
+        // If the user clicked on the group selection box, let it handle dragging
+        if (m_groupSelectionBox && hit == m_groupSelectionBox) {
+            QGraphicsScene::mousePressEvent(event);
+            return;
+        }
+
+        if (!hit) {
+            // Clicked on empty canvas → clear selection and let rubberband start
+            clearSelection();
+            QGraphicsScene::mousePressEvent(event);
+            return;
+        }
+
+        // Resolve to top-level item
+        QGraphicsItem *target = hit;
+        if (m_activeSelectionBox && hit == m_activeSelectionBox)
+            target = m_activeSelectionBox->parentItem();
+        else if (hit->topLevelItem())
+            target = hit->topLevelItem();
+
+        if (!target || !(target->flags() & QGraphicsItem::ItemIsSelectable)) {
+            QGraphicsScene::mousePressEvent(event);
+            return;
+        }
+
+        bool shift = event->modifiers() & Qt::ShiftModifier;
+
+        if (target->isSelected()) {
+            // Clicking an already-selected item: KEEP the whole selection so
+            // the user can drag the entire group. Just forward to base class
+            // for drag initiation.
+            QGraphicsScene::mousePressEvent(event);
+            return;
+        }
+
+        if (shift) {
+            // Shift-click: add/remove this item from the selection
+            target->setSelected(!target->isSelected());
             event->accept();
             return;
         }
 
-        // 2. Identify the target circuit element (wires are top-level, pins have a parent component)
-        QGraphicsItem *targetItem = item;
-        if (m_activeSelectionBox && item == m_activeSelectionBox) {
-            targetItem = m_activeSelectionBox->parentItem();
-        } else if (item->topLevelItem()) {
-            targetItem = item->topLevelItem();
-        }
-
-        if (targetItem && (targetItem->flags() & QGraphicsItem::ItemIsSelectable)) {
-            // Forward event to allow dragging / item interaction
-            QGraphicsScene::mousePressEvent(event);
-
-            // Enforce single-item selection: deselect all other items and select targetItem
-            for (QGraphicsItem *sel : selectedItems()) {
-                if (sel != targetItem) {
-                    sel->setSelected(false);
-                }
-            }
-            targetItem->setSelected(true);
-            return;
-        }
+        // Normal click on unselected item: select only this item
+        clearSelection();
+        target->setSelected(true);
+        QGraphicsScene::mousePressEvent(event);
+        return;
     }
 
     QGraphicsScene::mousePressEvent(event);
@@ -349,10 +476,7 @@ void CircuitScene::keyPressEvent(QKeyEvent *event) {
     }
 
     if (event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace) {
-        QList<QGraphicsItem *> selected = selectedItems();
-        for (QGraphicsItem *item : selected) {
-            deleteItem(item);
-        }
+        deleteSelectedItems();
         event->accept();
         return;
     }

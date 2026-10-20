@@ -20,6 +20,8 @@ set(PROJECT_SOURCES
         CircuitScene.cpp
         SelectionBox.h
         SelectionBox.cpp
+        GroupSelectionBox.h
+        GroupSelectionBox.cpp
 
         ZoomGraphicsView.cpp
         ZoomGraphicsView.h
