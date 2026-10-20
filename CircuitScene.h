@@ -6,7 +6,6 @@
 #include <QKeyEvent>
 
 class SelectionBox;
-class GroupSelectionBox;
 class Point;
 class Wire;
 class CircuitAdapter;
@@ -25,7 +24,6 @@ public:
     void setWireToolActive(bool active);
     bool isWireToolActive() const { return m_wireToolActive; }
 
-    // Delete a single item (and its attached wires) cleanly
     void deleteItem(QGraphicsItem *item);
     void clearCircuit();
 
@@ -49,13 +47,10 @@ protected:
 
 private:
     void clearSelectionBox();
-    void clearGroupSelectionBox();
-    void updateGroupSelectionBox();
 
     bool m_placementMode = false;
     bool m_wireToolActive = false;
     SelectionBox *m_activeSelectionBox = nullptr;
-    GroupSelectionBox *m_groupSelectionBox = nullptr;
 
     Point *m_wireStartPoint = nullptr;
     Wire *m_draftWire = nullptr;

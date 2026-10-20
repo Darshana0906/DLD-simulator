@@ -29,7 +29,13 @@ void ZoomGraphicsView::applyCursor()
     } else if (m_circuitScene && m_circuitScene->isPlacementMode()) {
         viewport()->setCursor(Qt::CrossCursor);
     } else {
-        viewport()->setCursor(Qt::ArrowCursor);
+        // Show OpenHandCursor when hovering over empty background for quick click-drag pan
+        QPoint localPos = mapFromGlobal(QCursor::pos());
+        if (itemAt(localPos) == nullptr) {
+            viewport()->setCursor(Qt::OpenHandCursor);
+        } else {
+            viewport()->setCursor(Qt::ArrowCursor);
+        }
     }
 }
 
@@ -87,6 +93,9 @@ void ZoomGraphicsView::wheelEvent(QWheelEvent *event)
         return;
     }
 
+    // Exponential scaling based on delta magnitude:
+    // dy = 120 (1 mouse wheel notch) -> factor = 1.15x
+    // dy = 12 (fine touchpad step) -> smooth fractional factor (1.014x)
     double factor = std::pow(1.15, dy / 120.0);
 
     if (m_zoomLevel * factor < kZoomMin) {
@@ -110,36 +119,19 @@ void ZoomGraphicsView::wheelEvent(QWheelEvent *event)
 
 void ZoomGraphicsView::mousePressEvent(QMouseEvent *event)
 {
-    bool isMiddle   = (event->button() == Qt::MiddleButton);
+    bool isMiddle = (event->button() == Qt::MiddleButton);
     bool isSpaceLeft = (event->button() == Qt::LeftButton && m_spacePressed);
+    bool isLeftOnEmpty = (event->button() == Qt::LeftButton &&
+                          m_circuitScene &&
+                          !m_circuitScene->isPlacementMode() &&
+                          itemAt(event->pos()) == nullptr);
 
-    // ── Panning: Middle-click or Space + Left-click ──────────────────────────
-    if (isMiddle || isSpaceLeft) {
+    if (isMiddle || isSpaceLeft || isLeftOnEmpty) {
         m_isPanning = true;
         m_panStartPos = event->pos();
         viewport()->setCursor(Qt::ClosedHandCursor);
         event->accept();
         return;
-    }
-
-    // ── Left-click ────────────────────────────────────────────────────────────
-    if (event->button() == Qt::LeftButton) {
-        bool inPlacement = m_circuitScene && m_circuitScene->isPlacementMode();
-
-        if (!inPlacement) {
-            // Check whether there is anything under the cursor
-            QGraphicsItem *hit = itemAt(event->pos());
-
-            if (hit == nullptr) {
-                // Empty canvas → start rubberband selection
-                setDragMode(QGraphicsView::RubberBandDrag);
-            } else {
-                // Item under cursor → let the scene handle dragging it
-                setDragMode(QGraphicsView::NoDrag);
-            }
-        } else {
-            setDragMode(QGraphicsView::NoDrag);
-        }
     }
 
     QGraphicsView::mousePressEvent(event);
@@ -174,7 +166,6 @@ void ZoomGraphicsView::mouseReleaseEvent(QMouseEvent *event)
     }
 
     QGraphicsView::mouseReleaseEvent(event);
-    setDragMode(QGraphicsView::NoDrag);
     applyCursor();
 }
 
