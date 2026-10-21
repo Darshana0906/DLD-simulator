@@ -321,11 +321,40 @@ QString CircuitSerializer::generateSvgString(CircuitScene *scene, bool embedMeta
     out << "  <g id=\"dld-components\">\n";
     for (QGraphicsItem *item : scene->items()) {
         if (Gate *gate = dynamic_cast<Gate*>(item)) {
+            // Draw input pin lead lines (drawn before gate body so body fill cleanly masks the junction)
+            for (Point *pin : gate->getInputPins()) {
+                QPointF p = pin->getCenterScenePos();
+                qreal endX = 25.0;
+                if (dynamic_cast<NotGate*>(gate)) {
+                    endX = 5.0;
+                } else if (dynamic_cast<XorGate*>(gate) || dynamic_cast<XnorGate*>(gate)) {
+                    qreal dy = (p.y() - (gate->pos().y() + 30.0)) / 30.0;
+                    endX = 7.0 - 15.0 * (dy * dy);
+                }
+                out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                           .arg(p.x(), 0, 'f', 1).arg(p.y(), 0, 'f', 1)
+                           .arg(gate->pos().x() + endX, 0, 'f', 1).arg(p.y(), 0, 'f', 1);
+            }
+
             QString pathD = pathToSvgD(gate->getPath(), gate->pos());
             out << QString("    <path d=\"%1\" fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"2\" />\n")
                        .arg(pathD);
 
-            // Gate pins
+            // Draw output pin lead line
+            if (gate->getOutputPin()) {
+                QPointF p = gate->getOutputPin()->getCenterScenePos();
+                qreal outStartX = gate->pos().x() + 100;
+                if (dynamic_cast<NotGate*>(gate)) {
+                    outStartX = gate->pos().x() + 90;
+                } else if (dynamic_cast<NandGate*>(gate) || dynamic_cast<NorGate*>(gate) || dynamic_cast<XnorGate*>(gate)) {
+                    outStartX = gate->pos().x() + 110;
+                }
+                out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                           .arg(outStartX, 0, 'f', 1).arg(p.y(), 0, 'f', 1)
+                           .arg(p.x(), 0, 'f', 1).arg(p.y(), 0, 'f', 1);
+            }
+
+            // Gate pin terminals (dots)
             for (Point *pin : gate->getInputPins()) {
                 QPointF p = pin->getCenterScenePos();
                 out << QString("    <circle cx=\"%1\" cy=\"%2\" r=\"3.5\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"1\" />\n")
@@ -339,6 +368,10 @@ QString CircuitSerializer::generateSvgString(CircuitScene *scene, bool embedMeta
         } else if (Switch *sw = dynamic_cast<Switch*>(item)) {
             QPointF p = sw->pos();
             QString fill = sw->getValue() ? "#00c853" : "#ffffff";
+            // Terminal lead line connecting switch circle to output pin
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 40, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1)
+                       .arg(p.x() + 55, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1);
             out << QString("    <circle cx=\"%1\" cy=\"%2\" r=\"15\" fill=\"%3\" stroke=\"#000000\" stroke-width=\"2\" />\n")
                        .arg(p.x() + 25, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1).arg(fill);
             out << QString("    <text x=\"%1\" y=\"%2\" font-family=\"Ubuntu, sans-serif\" font-size=\"11\" "
@@ -351,6 +384,10 @@ QString CircuitSerializer::generateSvgString(CircuitScene *scene, bool embedMeta
             }
         } else if (dynamic_cast<Const1*>(item)) {
             QPointF p = item->pos();
+            // Terminal lead line connecting const1 rect to output pin
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 40, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1)
+                       .arg(p.x() + 55, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1);
             out << QString("    <rect x=\"%1\" y=\"%2\" width=\"30\" height=\"30\" fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"2\" rx=\"4\" />\n")
                        .arg(p.x() + 10, 0, 'f', 1).arg(p.y() + 10, 0, 'f', 1);
             out << QString("    <text x=\"%1\" y=\"%2\" font-family=\"Ubuntu, sans-serif\" font-size=\"14\" "
@@ -365,12 +402,26 @@ QString CircuitSerializer::generateSvgString(CircuitScene *scene, bool embedMeta
             }
         } else if (dynamic_cast<GND*>(item)) {
             QPointF p = item->pos();
-            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" />\n")
-                       .arg(p.x() + 10, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1).arg(p.x() + 40, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1);
-            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" />\n")
-                       .arg(p.x() + 17, 0, 'f', 1).arg(p.y() + 30, 0, 'f', 1).arg(p.x() + 33, 0, 'f', 1).arg(p.y() + 30, 0, 'f', 1);
-            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" />\n")
-                       .arg(p.x() + 22, 0, 'f', 1).arg(p.y() + 35, 0, 'f', 1).arg(p.x() + 28, 0, 'f', 1).arg(p.y() + 35, 0, 'f', 1);
+            // Terminal lead line to pin
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 20, 0, 'f', 1).arg(p.y() + 15, 0, 'f', 1)
+                       .arg(p.x() + 55, 0, 'f', 1).arg(p.y() + 15, 0, 'f', 1);
+            // Stem down to ground plates
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 20, 0, 'f', 1).arg(p.y() + 15, 0, 'f', 1)
+                       .arg(p.x() + 20, 0, 'f', 1).arg(p.y() + 27, 0, 'f', 1);
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 4, 0, 'f', 1).arg(p.y() + 27, 0, 'f', 1)
+                       .arg(p.x() + 36, 0, 'f', 1).arg(p.y() + 27, 0, 'f', 1);
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 8, 0, 'f', 1).arg(p.y() + 33, 0, 'f', 1)
+                       .arg(p.x() + 32, 0, 'f', 1).arg(p.y() + 33, 0, 'f', 1);
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 12, 0, 'f', 1).arg(p.y() + 39, 0, 'f', 1)
+                       .arg(p.x() + 28, 0, 'f', 1).arg(p.y() + 39, 0, 'f', 1);
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 16, 0, 'f', 1).arg(p.y() + 45, 0, 'f', 1)
+                       .arg(p.x() + 24, 0, 'f', 1).arg(p.y() + 45, 0, 'f', 1);
             if (Input *inp = dynamic_cast<Input*>(item)) {
                 if (inp->getOutputPoint()) {
                     QPointF pinPos = inp->getOutputPoint()->getCenterScenePos();
@@ -380,9 +431,70 @@ QString CircuitSerializer::generateSvgString(CircuitScene *scene, bool embedMeta
             }
         } else if (LED *led = dynamic_cast<LED*>(item)) {
             QPointF p = led->pos();
-            QString fill = led->getState() ? "#ffeb3b" : "#ffffff";
-            out << QString("    <circle cx=\"%1\" cy=\"%2\" r=\"15\" fill=\"%3\" stroke=\"#000000\" stroke-width=\"2\" />\n")
-                       .arg(p.x() + 28, 0, 'f', 1).arg(p.y() + 17, 0, 'f', 1).arg(fill);
+            QString bulbFill = led->getState() ? "#ffeb3b" : "#ffffff";
+            QString collarFill = led->getState() ? "#fff596" : "#ffffff";
+
+            // Terminal lead wire from input pin to bulb body
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"2\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() - 5, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1)
+                       .arg(p.x() + 17.5, 0, 'f', 1).arg(p.y() + 25, 0, 'f', 1);
+
+            // Glass bulb body (dome shape)
+            out << QString("    <path d=\"M %1 %2 C %3 %4, %5 %6, %7 %8 C %9 %10, %11 %12, %13 %14 C %15 %16, %17 %18, %19 %20 C %21 %22, %23 %24, %25 %26 Z\" "
+                           "fill=\"%27\" stroke=\"#000000\" stroke-width=\"2\" stroke-linejoin=\"round\" />\n")
+                       .arg(p.x() + 20.5, 0, 'f', 1).arg(p.y() + 33.5, 0, 'f', 1)   // moveTo
+                       .arg(p.x() + 20.0, 0, 'f', 1).arg(p.y() + 27.0, 0, 'f', 1)   // cubicTo cp1
+                       .arg(p.x() + 14.0, 0, 'f', 1).arg(p.y() + 23.0, 0, 'f', 1)   // cubicTo cp2
+                       .arg(p.x() + 14.0, 0, 'f', 1).arg(p.y() + 17.0, 0, 'f', 1)   // cubicTo end
+                       .arg(p.x() + 14.0, 0, 'f', 1).arg(p.y() + 9.3, 0, 'f', 1)    // cubicTo cp1
+                       .arg(p.x() + 20.3, 0, 'f', 1).arg(p.y() + 3.0, 0, 'f', 1)    // cubicTo cp2
+                       .arg(p.x() + 28.0, 0, 'f', 1).arg(p.y() + 3.0, 0, 'f', 1)    // cubicTo end
+                       .arg(p.x() + 35.7, 0, 'f', 1).arg(p.y() + 3.0, 0, 'f', 1)    // cubicTo cp1
+                       .arg(p.x() + 42.0, 0, 'f', 1).arg(p.y() + 9.3, 0, 'f', 1)    // cubicTo cp2
+                       .arg(p.x() + 42.0, 0, 'f', 1).arg(p.y() + 17.0, 0, 'f', 1)   // cubicTo end
+                       .arg(p.x() + 42.0, 0, 'f', 1).arg(p.y() + 23.0, 0, 'f', 1)   // cubicTo cp1
+                       .arg(p.x() + 36.0, 0, 'f', 1).arg(p.y() + 27.0, 0, 'f', 1)   // cubicTo cp2
+                       .arg(p.x() + 35.5, 0, 'f', 1).arg(p.y() + 33.5, 0, 'f', 1)   // cubicTo end
+                       .arg(bulbFill);
+
+            // Socket collar inside bulb
+            out << QString("    <rect x=\"%1\" y=\"%2\" width=\"5\" height=\"4\" fill=\"%3\" stroke=\"#000000\" stroke-width=\"1.5\" />\n")
+                       .arg(p.x() + 25.5, 0, 'f', 1).arg(p.y() + 29.5, 0, 'f', 1).arg(collarFill);
+
+            // Filament supports
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"1.5\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 26.5, 0, 'f', 1).arg(p.y() + 29.5, 0, 'f', 1)
+                       .arg(p.x() + 23.0, 0, 'f', 1).arg(p.y() + 20.0, 0, 'f', 1);
+            out << QString("    <line x1=\"%1\" y1=\"%2\" x2=\"%3\" y2=\"%4\" stroke=\"#000000\" stroke-width=\"1.5\" stroke-linecap=\"round\" />\n")
+                       .arg(p.x() + 29.5, 0, 'f', 1).arg(p.y() + 29.5, 0, 'f', 1)
+                       .arg(p.x() + 33.0, 0, 'f', 1).arg(p.y() + 20.0, 0, 'f', 1);
+
+            // Zigzag filament
+            out << QString("    <path d=\"M %1 %2 L %3 %4 L %5 %6 L %7 %8 L %9 %10 L %11 %12 L %13 %14\" "
+                           "fill=\"none\" stroke=\"#000000\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />\n")
+                       .arg(p.x() + 23.0, 0, 'f', 1).arg(p.y() + 20.0, 0, 'f', 1)
+                       .arg(p.x() + 24.7, 0, 'f', 1).arg(p.y() + 18.2, 0, 'f', 1)
+                       .arg(p.x() + 26.3, 0, 'f', 1).arg(p.y() + 20.0, 0, 'f', 1)
+                       .arg(p.x() + 28.0, 0, 'f', 1).arg(p.y() + 18.2, 0, 'f', 1)
+                       .arg(p.x() + 29.7, 0, 'f', 1).arg(p.y() + 20.0, 0, 'f', 1)
+                       .arg(p.x() + 31.3, 0, 'f', 1).arg(p.y() + 18.2, 0, 'f', 1)
+                       .arg(p.x() + 33.0, 0, 'f', 1).arg(p.y() + 20.0, 0, 'f', 1);
+
+            // Screw base threads (3 rounded ribs)
+            out << QString("    <rect x=\"%1\" y=\"%2\" width=\"12.4\" height=\"3\" rx=\"1.5\" ry=\"1.5\" fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"1.5\" />\n")
+                       .arg(p.x() + 21.8, 0, 'f', 1).arg(p.y() + 34.0, 0, 'f', 1);
+            out << QString("    <rect x=\"%1\" y=\"%2\" width=\"12\" height=\"3\" rx=\"1.5\" ry=\"1.5\" fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"1.5\" />\n")
+                       .arg(p.x() + 22.0, 0, 'f', 1).arg(p.y() + 37.2, 0, 'f', 1);
+            out << QString("    <rect x=\"%1\" y=\"%2\" width=\"11\" height=\"3\" rx=\"1.5\" ry=\"1.5\" fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"1.5\" />\n")
+                       .arg(p.x() + 22.5, 0, 'f', 1).arg(p.y() + 40.4, 0, 'f', 1);
+
+            // Bottom base contact terminal
+            out << QString("    <path d=\"M %1 %2 Q %3 %4, %5 %6 Z\" fill=\"#323232\" stroke=\"#000000\" stroke-width=\"1.5\" stroke-linejoin=\"round\" />\n")
+                       .arg(p.x() + 24.0, 0, 'f', 1).arg(p.y() + 43.4, 0, 'f', 1)
+                       .arg(p.x() + 28.0, 0, 'f', 1).arg(p.y() + 47.0, 0, 'f', 1)
+                       .arg(p.x() + 32.0, 0, 'f', 1).arg(p.y() + 43.4, 0, 'f', 1);
+
+            // Input pin dot
             if (led->getInputPoint()) {
                 QPointF pinPos = led->getInputPoint()->getCenterScenePos();
                 out << QString("    <circle cx=\"%1\" cy=\"%2\" r=\"3.5\" fill=\"#263238\" stroke=\"#000000\" stroke-width=\"1\" />\n")

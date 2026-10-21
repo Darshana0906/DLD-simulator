@@ -19,11 +19,13 @@
 #include "logic/CircuitAdapter.h"
 #include "overlapping.h"
 #include <QAction>
+#include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QIcon>
 #include <QKeySequence>
 #include <QLabel>
+#include <QRegularExpression>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -591,23 +593,53 @@ void MainWindow::openCircuit() {
   }
 }
 
-void MainWindow::saveCircuit() {
-  if (currentFilePath.isEmpty()) {
-    saveCircuitAs();
-  } else {
-    QString errorMsg;
-    if (CircuitSerializer::saveToFile(currentFilePath, scene, &errorMsg)) {
-      updateWindowTitle();
-      statusBar()->showMessage(QString("Saved circuit to %1").arg(QFileInfo(currentFilePath).fileName()), 3500);
-    } else {
-      QMessageBox::critical(this, "Error Saving Circuit",
-                            QString("Failed to save circuit:\n%1").arg(errorMsg));
+static QString getSuggestedSavePath(const QString &currentPath) {
+  QString dir = QDir::currentPath();
+  QString baseName = "circuit";
+  QString suffix = "svg";
+
+  if (!currentPath.isEmpty()) {
+    QFileInfo fi(currentPath);
+    dir = fi.absolutePath();
+    baseName = fi.completeBaseName();
+    suffix = fi.suffix();
+    if (suffix.isEmpty()) suffix = "svg";
+  }
+
+  // If baseName ends with a number (e.g. "circuit2"), increment it
+  QRegularExpression re("^(.*?)(\\d+)$");
+  QRegularExpressionMatch match = re.match(baseName);
+  QString prefix = baseName;
+  int nextNum = 2;
+  if (match.hasMatch()) {
+    prefix = match.captured(1);
+    nextNum = match.captured(2).toInt() + 1;
+  }
+
+  // If currentPath is empty and "circuit.svg" doesn't exist, use that
+  if (currentPath.isEmpty()) {
+    QString candidate = QDir(dir).filePath(QString("%1.%2").arg(baseName, suffix));
+    if (!QFile::exists(candidate)) {
+      return candidate;
     }
+  }
+
+  // Find the next available non-existing candidate prefixN.svg (e.g. circuit2.svg, circuit3.svg)
+  while (true) {
+    QString candidate = QDir(dir).filePath(QString("%1%2.%3").arg(prefix).arg(nextNum).arg(suffix));
+    if (!QFile::exists(candidate)) {
+      return candidate;
+    }
+    nextNum++;
   }
 }
 
+void MainWindow::saveCircuit() {
+  saveCircuitAs();
+}
+
 void MainWindow::saveCircuitAs() {
-  QString defaultPath = currentFilePath.isEmpty() ? "circuit.svg" : currentFilePath;
+  QString defaultPath = getSuggestedSavePath(currentFilePath);
   QString selectedFilter;
   QString fileName = QFileDialog::getSaveFileName(
       this, "Save Circuit As", defaultPath,

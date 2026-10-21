@@ -15,6 +15,7 @@ QPainterPath NandGate::getPath() const {
     path.cubicTo(100, 45, 85, 60, 50, 60);
     path.lineTo(0, 60);
     path.closeSubpath();
+    path.addEllipse(100, 25, 10, 10);
     return path;
 }
 
