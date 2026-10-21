@@ -1,9 +1,11 @@
 #include "ZoomGraphicsView.h"
 #include "CircuitScene.h"
+#include <QGraphicsItem>
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QScrollBar>
 #include <QApplication>
+#include <QCursor>
 #include <cmath>
 
 ZoomGraphicsView::ZoomGraphicsView(QWidget *parent)
@@ -29,12 +31,36 @@ void ZoomGraphicsView::applyCursor()
     } else if (m_circuitScene && m_circuitScene->isPlacementMode()) {
         viewport()->setCursor(Qt::CrossCursor);
     } else {
+        // If an item has grabbed the mouse (e.g. dragging a resize handle),
+        // maintain its cursor during the drag gesture.
+        if (m_circuitScene && m_circuitScene->mouseGrabberItem()) {
+            QGraphicsItem *grabber = m_circuitScene->mouseGrabberItem();
+            if (grabber->hasCursor()) {
+                viewport()->setCursor(grabber->cursor());
+                return;
+            }
+            viewport()->setCursor(Qt::ArrowCursor);
+            return;
+        }
+
         // Show OpenHandCursor when hovering over empty background for quick click-drag pan
-        QPoint localPos = mapFromGlobal(QCursor::pos());
-        if (itemAt(localPos) == nullptr) {
+        QPoint localPos = viewport()->mapFromGlobal(QCursor::pos());
+        const QList<QGraphicsItem *> itemList = items(localPos);
+        if (itemList.isEmpty()) {
             viewport()->setCursor(Qt::OpenHandCursor);
         } else {
-            viewport()->setCursor(Qt::ArrowCursor);
+            QGraphicsItem *cursorItem = nullptr;
+            for (QGraphicsItem *item : itemList) {
+                if (item->hasCursor()) {
+                    cursorItem = item;
+                    break;
+                }
+            }
+            if (cursorItem) {
+                viewport()->setCursor(cursorItem->cursor());
+            } else {
+                viewport()->setCursor(Qt::ArrowCursor);
+            }
         }
     }
 }
