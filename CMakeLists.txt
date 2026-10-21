@@ -22,6 +22,8 @@ set(PROJECT_SOURCES
         CircuitSerializer.cpp
         SelectionBox.h
         SelectionBox.cpp
+        GroupSelectionBox.h
+        GroupSelectionBox.cpp
 
         ZoomGraphicsView.cpp
         ZoomGraphicsView.h
