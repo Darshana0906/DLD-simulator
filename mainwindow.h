@@ -42,6 +42,7 @@ private slots:
     void runSimulation();
     void clearCircuit();
     void newCircuit();
+    void newWindow();
     void openCircuit();
     void saveCircuit();
     void saveCircuitAs();

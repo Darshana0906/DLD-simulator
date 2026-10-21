@@ -265,6 +265,13 @@ MainWindow::MainWindow(QWidget *parent)
   fileMenu->addAction(newAction);
   connect(newAction, &QAction::triggered, this, &MainWindow::newCircuit);
 
+  QAction *newWindowAction = new QAction("🪟  New Window", this);
+  newWindowAction->setObjectName("actionNewWindow");
+  newWindowAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
+  newWindowAction->setToolTip("Open a new simulator window (Ctrl+Shift+N)");
+  fileMenu->addAction(newWindowAction);
+  connect(newWindowAction, &QAction::triggered, this, &MainWindow::newWindow);
+
   QAction *openAction = new QAction("📂  Open Circuit...", this);
   openAction->setShortcut(QKeySequence::Open);
   openAction->setToolTip("Open a circuit file (.svg, .dld, .json) (Ctrl+O)");
@@ -573,6 +580,12 @@ void MainWindow::newCircuit() {
   currentFilePath.clear();
   updateWindowTitle();
   statusBar()->showMessage("New circuit created.", 2500);
+}
+
+void MainWindow::newWindow() {
+  MainWindow *newWin = new MainWindow();
+  newWin->setAttribute(Qt::WA_DeleteOnClose);
+  newWin->show();
 }
 
 void MainWindow::openCircuit() {
