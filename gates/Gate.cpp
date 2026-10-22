@@ -106,6 +106,13 @@ void Gate::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) {
   
 
     if (dialog.exec() == QDialog::Accepted) {
-        setInputCount(dialog.intValue());
+        int oldCount = m_inputPins.size();
+        int newCount = dialog.intValue();
+        if (oldCount != newCount) {
+            setInputCount(newCount);
+            if (CircuitScene *cs = dynamic_cast<CircuitScene *>(scene())) {
+                emit cs->circuitModified();
+            }
+        }
     }
 }

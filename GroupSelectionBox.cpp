@@ -1,3 +1,4 @@
+#include "CircuitScene.h"
 #include "GroupSelectionBox.h"
 #include "elements/Point.h"
 #include "elements/Wire.h"
@@ -164,6 +165,9 @@ void GroupSelectionBox::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
         m_dragItems.clear();
         m_dragItemStartPositions.clear();
         recalculate();
+        if (CircuitScene *cs = dynamic_cast<CircuitScene *>(scene())) {
+            emit cs->circuitModified();
+        }
         event->accept();
         return;
     }
