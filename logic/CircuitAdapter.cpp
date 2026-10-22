@@ -605,3 +605,7 @@ void CircuitAdapter::stepSimulation() {
     emit simulationStepped();
 }
 
+bool CircuitAdapter::evaluateLogicOnly() {
+    return m_dag.evaluate(m_nodes);
+}
+

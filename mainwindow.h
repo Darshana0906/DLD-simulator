@@ -47,6 +47,7 @@ private slots:
     void saveCircuit();
     void saveCircuitAs();
     void showLogicalEquation();
+    void showTruthTable();
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);
@@ -60,6 +61,7 @@ private:
     QMap<ElementType, class QToolButton*> toolButtons;
     QString currentFilePath;
     class EquationDialog *m_equationDialog = nullptr;
+    class TruthTableDialog *m_truthTableDialog = nullptr;
     class QAction *m_selectAction = nullptr;
 };
 

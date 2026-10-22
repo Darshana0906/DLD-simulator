@@ -113,6 +113,7 @@ public:
     // =========================================================================
     // Evaluates current logic states using topological sort and notifies outputs
     void stepSimulation();
+    bool evaluateLogicOnly();
 
     // Access to DAG representation and Topological Sort
     const CircuitDAG& getDAG() const { return m_dag; }

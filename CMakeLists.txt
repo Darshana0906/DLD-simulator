@@ -76,6 +76,8 @@ set(PROJECT_SOURCES
 
         EquationDialog.h
         EquationDialog.cpp
+        TruthTableDialog.h
+        TruthTableDialog.cpp
 
         resources.qrc
 
