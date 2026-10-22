@@ -5,7 +5,9 @@
 #include "elements/Point.h"
 #include "elements/Wire.h"
 #include "elements/Input.h"
+#include "elements/Switch.h"
 #include "elements/LED.h"
+#include "elements/NodeTagItem.h"
 #include "gates/Gate.h"
 #include "logic/CircuitAdapter.h"
 #include <QPainter>
@@ -570,4 +572,19 @@ void CircuitScene::drawBackground(QPainter *painter, const QRectF &rect) {
 
     painter->setPen(QPen(QColor(210, 215, 222), 1));
     painter->drawPoints(points.constData(), points.size());
+}
+
+void CircuitScene::setShowTags(bool show) {
+    if (m_showTags != show) {
+        m_showTags = show;
+        for (QGraphicsItem *item : items()) {
+            if (NodeTagItem *tag = dynamic_cast<NodeTagItem*>(item)) {
+                tag->setVisible(show);
+            }
+        }
+    }
+}
+
+void CircuitScene::drawForeground(QPainter *painter, const QRectF &rect) {
+    QGraphicsScene::drawForeground(painter, rect);
 }

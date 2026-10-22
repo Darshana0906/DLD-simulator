@@ -63,6 +63,8 @@ set(PROJECT_SOURCES
         elements/Const1.cpp
         elements/Switch.h
         elements/Switch.cpp
+        elements/NodeTagItem.h
+        elements/NodeTagItem.cpp
 
         logic/LogicTypes.h
         logic/Node.h
@@ -71,6 +73,11 @@ set(PROJECT_SOURCES
         logic/CircuitDAG.cpp
         logic/CircuitAdapter.h
         logic/CircuitAdapter.cpp
+        logic/EquationGenerator.h
+        logic/EquationGenerator.cpp
+
+        EquationDialog.h
+        EquationDialog.cpp
 
         resources.qrc
 

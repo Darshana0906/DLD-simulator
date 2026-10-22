@@ -1,5 +1,6 @@
 #include "ZoomGraphicsView.h"
 #include "CircuitScene.h"
+#include "elements/Switch.h"
 #include <QGraphicsItem>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -15,11 +16,19 @@ ZoomGraphicsView::ZoomGraphicsView(QWidget *parent)
     setResizeAnchor(QGraphicsView::AnchorUnderMouse);
     setDragMode(QGraphicsView::NoDrag);
     viewport()->setAttribute(Qt::WA_AcceptTouchEvents, true);
+    viewport()->setCursor(Qt::OpenHandCursor);
 }
 
 void ZoomGraphicsView::setCircuitScene(CircuitScene *scene)
 {
     m_circuitScene = scene;
+    applyCursor();
+}
+
+void ZoomGraphicsView::setSelectMode(bool active)
+{
+    m_isSelectMode = active;
+    applyCursor();
 }
 
 void ZoomGraphicsView::applyCursor()
@@ -28,9 +37,9 @@ void ZoomGraphicsView::applyCursor()
         viewport()->setCursor(Qt::ClosedHandCursor);
     } else if (m_spacePressed) {
         viewport()->setCursor(Qt::OpenHandCursor);
-    } else if (m_circuitScene && m_circuitScene->isPlacementMode()) {
+    } else if (m_circuitScene && (m_circuitScene->isPlacementMode() || m_circuitScene->isWireToolActive())) {
         viewport()->setCursor(Qt::CrossCursor);
-    } else {
+    } else if (m_isSelectMode) {
         // If an item has grabbed the mouse (e.g. dragging a resize handle),
         // maintain its cursor during the drag gesture.
         if (m_circuitScene && m_circuitScene->mouseGrabberItem()) {
@@ -57,6 +66,9 @@ void ZoomGraphicsView::applyCursor()
         } else {
             viewport()->setCursor(Qt::ArrowCursor);
         }
+    } else {
+        // Default when no element is selected: PAW
+        viewport()->setCursor(Qt::OpenHandCursor);
     }
 }
 
@@ -151,9 +163,16 @@ void ZoomGraphicsView::mousePressEvent(QMouseEvent *event)
 
     // ── Left-click ────────────────────────────────────────────────────────────
     if (event->button() == Qt::LeftButton) {
-        bool inPlacement = m_circuitScene && m_circuitScene->isPlacementMode();
+        bool inPlacement = m_circuitScene && (m_circuitScene->isPlacementMode() || m_circuitScene->isWireToolActive());
 
-        if (!inPlacement) {
+        if (inPlacement) {
+            setDragMode(QGraphicsView::NoDrag);
+            QGraphicsView::mousePressEvent(event);
+            applyCursor();
+            return;
+        }
+
+        if (m_isSelectMode) {
             // Check whether there is anything under the cursor
             QGraphicsItem *hit = itemAt(event->pos());
 
@@ -164,8 +183,34 @@ void ZoomGraphicsView::mousePressEvent(QMouseEvent *event)
                 // Item under cursor → let the scene handle dragging it
                 setDragMode(QGraphicsView::NoDrag);
             }
+            QGraphicsView::mousePressEvent(event);
+            applyCursor();
+            return;
         } else {
+            // Default: PAW mode
             setDragMode(QGraphicsView::NoDrag);
+
+            // Allow interactive switch click to toggle
+            QGraphicsItem *hit = itemAt(event->pos());
+            Switch *sw = nullptr;
+            if (hit) {
+                if (Switch *s = dynamic_cast<Switch*>(hit)) sw = s;
+                else if (hit->topLevelItem()) sw = dynamic_cast<Switch*>(hit->topLevelItem());
+            }
+
+            if (sw) {
+                sw->setValue(!sw->getValue());
+                event->accept();
+                applyCursor();
+                return;
+            }
+
+            // Otherwise, anywhere else pans the canvas
+            m_isPanning = true;
+            m_panStartPos = event->pos();
+            viewport()->setCursor(Qt::ClosedHandCursor);
+            event->accept();
+            return;
         }
     }
 

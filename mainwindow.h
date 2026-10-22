@@ -50,8 +50,7 @@ private slots:
     void openCircuit();
     void saveCircuit();
     void saveCircuitAs();
-    void undo();
-    void redo();
+    void showLogicalEquation();
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);
@@ -65,10 +64,8 @@ private:
     ElementType currentTool = ElementType::None;
     QMap<ElementType, QToolButton*> toolButtons;
     QString currentFilePath;
-
-    UndoManager *undoManager = nullptr;
-    QAction *undoAction = nullptr;
-    QAction *redoAction = nullptr;
+    class EquationDialog *m_equationDialog = nullptr;
+    class QAction *m_selectAction = nullptr;
 };
 
 #endif // MAINWINDOW_H

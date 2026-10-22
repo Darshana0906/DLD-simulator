@@ -18,6 +18,7 @@
 #include "gates/XnorGate.h"
 #include "gates/XorGate.h"
 #include "logic/CircuitAdapter.h"
+#include "EquationDialog.h"
 #include "overlapping.h"
 #include <QAction>
 #include <QDir>
@@ -99,14 +100,20 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::toggleFullScreenMode);
   addAction(fullScreenAction);
 
-  // Escape shortcut (Esc): cancel placement or clear selection regardless of canvas focus
+  // Escape shortcut (Esc): cancel placement, clear selection, or exit select mode
   QAction *escapeAction = new QAction(this);
   escapeAction->setShortcut(QKeySequence(Qt::Key_Escape));
   connect(escapeAction, &QAction::triggered, this, [this]() {
-    if (scene->isPlacementMode()) {
+    if (scene->isPlacementMode() || scene->isWireToolActive()) {
       cancelPlacement();
     } else if (!scene->selectedItems().isEmpty()) {
       scene->clearSelection();
+    } else if (ui->graphicsView->isSelectMode()) {
+      if (m_selectAction) {
+        m_selectAction->setChecked(false);
+      }
+      ui->graphicsView->setSelectMode(false);
+      statusBar()->showMessage("Paw Tool (Default): Drag on canvas to pan view.", 2000);
     }
   });
   addAction(escapeAction);
@@ -356,9 +363,27 @@ MainWindow::MainWindow(QWidget *parent)
   topControlBar->addAction(saveAction);
   topControlBar->addSeparator();
 
-  // Undo and Redo actions with arrow icons and their names
-  topControlBar->addAction(undoAction);
-  topControlBar->addAction(redoAction);
+  QAction *selectAction = new QAction("↖  Select", this);
+  selectAction->setCheckable(true);
+  selectAction->setShortcut(QKeySequence(Qt::Key_S));
+  selectAction->setToolTip("Select Tool: Click and drag to select and move components (S)\nWhen unselected, default Paw (Pan) mode is active.");
+  m_selectAction = selectAction;
+  topControlBar->addAction(selectAction);
+
+  connect(selectAction, &QAction::toggled, this, [this](bool checked) {
+    if (checked) {
+      if (currentTool != ElementType::None) {
+        cancelPlacement();
+      }
+      ui->graphicsView->setSelectMode(true);
+      statusBar()->showMessage("Select Tool: Click items to select/move, or drag on canvas for box selection.", 3000);
+    } else {
+      scene->clearSelection();
+      ui->graphicsView->setSelectMode(false);
+      statusBar()->showMessage("Paw Tool (Default): Drag on canvas to pan view.", 3000);
+    }
+  });
+
   topControlBar->addSeparator();
 
   QAction *simulateAction = new QAction("▶  Simulate Circuit", this);
@@ -368,6 +393,23 @@ MainWindow::MainWindow(QWidget *parent)
   topControlBar->addAction(simulateAction);
   connect(simulateAction, &QAction::triggered, this,
           &MainWindow::runSimulation);
+
+  topControlBar->addSeparator();
+
+  QAction *showTagsAction = new QAction("🏷  Show Tags", this);
+  showTagsAction->setCheckable(true);
+  showTagsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
+  showTagsAction->setToolTip("Show/hide node labels S#, G#, Y# on circuit components (Ctrl+T)");
+  topControlBar->addAction(showTagsAction);
+  connect(showTagsAction, &QAction::toggled, this, [this](bool checked) {
+      scene->setShowTags(checked);
+  });
+
+  QAction *equationAction = new QAction("📐  Logical Equation", this);
+  equationAction->setShortcut(QKeySequence(Qt::Key_F6));
+  equationAction->setToolTip("Derive Boolean logical equation from the circuit (F6)");
+  topControlBar->addAction(equationAction);
+  connect(equationAction, &QAction::triggered, this, &MainWindow::showLogicalEquation);
 
   topControlBar->addSeparator();
 
@@ -420,6 +462,12 @@ void MainWindow::setPlacementTool(ElementType type,
                                   const QString &elementName) {
   currentTool = type;
   updateToolButtonHighlights(type);
+  if (m_selectAction && m_selectAction->isChecked()) {
+    m_selectAction->blockSignals(true);
+    m_selectAction->setChecked(false);
+    m_selectAction->blockSignals(false);
+  }
+  ui->graphicsView->setSelectMode(false);
   if (type == ElementType::Wire) {
     scene->setWireToolActive(true);
     scene->setPlacementMode(false);
@@ -453,6 +501,12 @@ void MainWindow::cancelPlacement() {
   updateToolButtonHighlights(ElementType::None);
   scene->setWireToolActive(false);
   scene->setPlacementMode(false);
+  if (m_selectAction && m_selectAction->isChecked()) {
+    m_selectAction->blockSignals(true);
+    m_selectAction->setChecked(false);
+    m_selectAction->blockSignals(false);
+  }
+  ui->graphicsView->setSelectMode(false);
   ui->graphicsView->applyCursor();
   statusBar()->clearMessage();
 }
@@ -739,15 +793,15 @@ void MainWindow::saveCircuitAs() {
   }
 }
 
-void MainWindow::undo() {
-  if (undoManager && undoManager->canUndo()) {
-    undoManager->undo();
+void MainWindow::showLogicalEquation() {
+  if (!m_equationDialog) {
+    m_equationDialog = new EquationDialog(scene->getAdapter(), this);
+  } else {
+    m_equationDialog->refresh();
   }
+  m_equationDialog->show();
+  m_equationDialog->raise();
+  m_equationDialog->activateWindow();
 }
 
-void MainWindow::redo() {
-  if (undoManager && undoManager->canRedo()) {
-    undoManager->redo();
-  }
-}
 
