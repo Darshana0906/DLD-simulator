@@ -21,7 +21,6 @@ public slots:
 private:
     CircuitAdapter *m_adapter = nullptr;
 
-    QLabel *m_statusBanner = nullptr;
     QTextEdit *m_contentArea = nullptr;
     QPushButton *m_copyBtn = nullptr;
     QPushButton *m_refreshBtn = nullptr;

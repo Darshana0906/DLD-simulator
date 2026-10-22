@@ -6,6 +6,7 @@
 #include <QMap>
 
 class CircuitScene;
+class ReverseEquationDialog;
 class UndoManager;
 class QToolButton;
 class QAction;
@@ -51,6 +52,7 @@ private slots:
     void saveCircuit();
     void saveCircuitAs();
     void showLogicalEquation();
+    void showReverseEquationDialog();
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);
@@ -65,6 +67,7 @@ private:
     QMap<ElementType, QToolButton*> toolButtons;
     QString currentFilePath;
     class EquationDialog *m_equationDialog = nullptr;
+    ReverseEquationDialog *m_reverseEquationDialog = nullptr;
     class QAction *m_selectAction = nullptr;
 };
 

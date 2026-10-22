@@ -75,10 +75,15 @@ set(PROJECT_SOURCES
         logic/CircuitAdapter.cpp
         logic/EquationGenerator.h
         logic/EquationGenerator.cpp
-
+        logic/EquationParser.h
+        logic/EquationParser.cpp
+        logic/CircuitBuilder.h
+        logic/CircuitBuilder.cpp
         EquationDialog.h
         EquationDialog.cpp
 
+        ReverseEquationDialog.h
+        ReverseEquationDialog.cpp
         resources.qrc
 
 )
