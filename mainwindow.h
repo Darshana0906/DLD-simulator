@@ -3,8 +3,12 @@
 
 #include <QMainWindow>
 #include <QPointF>
+#include <QMap>
 
 class CircuitScene;
+class UndoManager;
+class QToolButton;
+class QAction;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -53,11 +57,12 @@ private:
     bool placeElement(ElementType type, const QPointF &pos);
     void updateToolButtonHighlights(ElementType activeType);
     void updateWindowTitle();
+    bool confirmDiscardChanges();
 
     Ui::MainWindow *ui;
     CircuitScene *scene;
     ElementType currentTool = ElementType::None;
-    QMap<ElementType, class QToolButton*> toolButtons;
+    QMap<ElementType, QToolButton*> toolButtons;
     QString currentFilePath;
     class EquationDialog *m_equationDialog = nullptr;
     class QAction *m_selectAction = nullptr;

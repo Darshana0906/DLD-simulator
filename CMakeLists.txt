@@ -24,6 +24,8 @@ set(PROJECT_SOURCES
         SelectionBox.cpp
         GroupSelectionBox.h
         GroupSelectionBox.cpp
+        UndoManager.h
+        UndoManager.cpp
 
         ZoomGraphicsView.cpp
         ZoomGraphicsView.h

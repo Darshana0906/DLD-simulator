@@ -16,5 +16,7 @@
         <file>icons/SWITCHip.png</file>
         
         <file>icons/LEDop.png</file>
+        <file>icons/undo.png</file>
+        <file>icons/redo.png</file>
     </qresource>
 </RCC>
