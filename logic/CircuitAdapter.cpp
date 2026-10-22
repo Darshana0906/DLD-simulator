@@ -139,6 +139,26 @@ QString CircuitAdapter::getTag(int nodeId) const {
     return (it != m_nodeTags.end()) ? it->second : QString();
 }
 
+void CircuitAdapter::setTag(int nodeId, const QString &tag) {
+    m_nodeTags[nodeId] = tag;
+    auto it = m_idToItem.find(nodeId);
+    if (it != m_idToItem.end() && it->second) {
+        QGraphicsItem *item = it->second;
+        for (QGraphicsItem *child : item->childItems()) {
+            if (NodeTagItem *t = dynamic_cast<NodeTagItem*>(child)) {
+                t->setTagText(tag);
+                t->setVisible(true);
+                return;
+            }
+        }
+        QPointF tagAnchor(50, 20);
+        if (dynamic_cast<Gate*>(item)) tagAnchor = QPointF(20, 0);
+        else if (dynamic_cast<LED*>(item)) tagAnchor = QPointF(-5, 25);
+        NodeTagItem *tagItem = new NodeTagItem(tag, tagAnchor, item);
+        tagItem->setVisible(true);
+    }
+}
+
 int CircuitAdapter::getNodeId(QGraphicsItem *item) const {
     auto it = m_itemToId.find(item);
     if (it != m_itemToId.end()) {

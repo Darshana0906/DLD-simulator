@@ -15,13 +15,6 @@ EquationDialog::EquationDialog(CircuitAdapter *adapter, QWidget *parent)
     mainLayout->setSpacing(10);
     mainLayout->setContentsMargins(14, 14, 14, 14);
 
-    // Status Banner
-    m_statusBanner = new QLabel(this);
-    m_statusBanner->setWordWrap(true);
-    m_statusBanner->setStyleSheet(
-        "QLabel { padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; }");
-    mainLayout->addWidget(m_statusBanner);
-
     // Content Display Area (Rich text read-only)
     m_contentArea = new QTextEdit(this);
     m_contentArea->setReadOnly(true);
@@ -79,9 +72,6 @@ EquationDialog::EquationDialog(CircuitAdapter *adapter, QWidget *parent)
 void EquationDialog::refresh() {
     m_copyBtn->setText("📋 Copy Equation");
     if (!m_adapter) {
-        m_statusBanner->setText("⚠️ Error: Circuit adapter not connected.");
-        m_statusBanner->setStyleSheet(
-            "QLabel { background: #FEF2F2; color: #B91C1C; border: 1px solid #FCA5A5; padding: 10px; border-radius: 6px; }");
         m_contentArea->setHtml("<p style='color:#64748B;'>No circuit data available.</p>");
         m_copyBtn->setEnabled(false);
         return;
@@ -95,11 +85,8 @@ void EquationDialog::updateUI(const EquationReport &report) {
     if (!report.readiness.isReady) {
         // Case 1: Feedback loop detected
         if (report.readiness.hasFeedbackLoop) {
-            m_statusBanner->setText("⚠️ Feedback loop detected");
-            m_statusBanner->setStyleSheet(
-                "QLabel { background: #FEF2F2; color: #B91C1C; border: 1px solid #FCA5A5; padding: 8px 12px; border-radius: 6px; font-weight:bold; }");
-
-            QString html = "<p style='color:#334155; margin:8px 0;'>Feedback loop detected in the circuit. Logical equations cannot be generated for sequential feedback circuits.</p>";
+            QString html = "<p style='color:#DC2626; font-weight:bold; margin:8px 0;'>⚠️ Feedback loop detected</p>"
+                           "<p style='color:#334155; margin:8px 0;'>Feedback loop detected in the circuit. Logical equations cannot be generated for sequential feedback circuits.</p>";
             m_contentArea->setHtml(html);
             m_copyBtn->setEnabled(false);
             m_lastCopiedText.clear();
@@ -107,11 +94,7 @@ void EquationDialog::updateUI(const EquationReport &report) {
         }
 
         // Case 2: Open ends detected
-        m_statusBanner->setText("⚠️ Open ends detected");
-        m_statusBanner->setStyleSheet(
-            "QLabel { background: #FFFBEB; color: #B45309; border: 1px solid #FCD34D; padding: 8px 12px; border-radius: 6px; font-weight:bold; }");
-
-        QString html = "<p style='color:#334155; margin:4px 0 8px 0;'>The following open ends must be connected:</p>";
+        QString html = "<p style='color:#B45309; font-weight:bold; margin:4px 0 8px 0;'>⚠️ The following open ends must be connected:</p>";
         html += "<ul style='color:#DC2626; margin:0; padding-left:20px; line-height: 1.5;'>";
         for (const QString &issue : report.readiness.issues) {
             html += QString("<li>%1</li>").arg(issue);
@@ -125,10 +108,6 @@ void EquationDialog::updateUI(const EquationReport &report) {
     }
 
     // Case 3: Circuit Ready - show output equations only for LEDs
-    m_statusBanner->setText("✓ Circuit Ready");
-    m_statusBanner->setStyleSheet(
-        "QLabel { background: #F0FDF4; color: #15803D; border: 1px solid #86EFAC; padding: 8px 12px; border-radius: 6px; font-weight:bold; }");
-
     QString html;
     QString plainTextCopy;
 

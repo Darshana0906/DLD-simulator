@@ -18,6 +18,7 @@
 #include "gates/XorGate.h"
 #include "logic/CircuitAdapter.h"
 #include "EquationDialog.h"
+#include "ReverseEquationDialog.h"
 #include "overlapping.h"
 #include <QAction>
 #include <QDir>
@@ -361,6 +362,12 @@ MainWindow::MainWindow(QWidget *parent)
   equationAction->setToolTip("Derive Boolean logical equation from the circuit (F6)");
   topControlBar->addAction(equationAction);
   connect(equationAction, &QAction::triggered, this, &MainWindow::showLogicalEquation);
+
+  QAction *reverseEquationAction = new QAction("📐  Equation → Circuit", this);
+  reverseEquationAction->setShortcut(QKeySequence(Qt::Key_F7));
+  reverseEquationAction->setToolTip("Generate a circuit from a Boolean equation (F7)");
+  topControlBar->addAction(reverseEquationAction);
+  connect(reverseEquationAction, &QAction::triggered, this, &MainWindow::showReverseEquationDialog);
 
   topControlBar->addSeparator();
 
@@ -747,4 +754,19 @@ void MainWindow::showLogicalEquation() {
   m_equationDialog->activateWindow();
 }
 
-
+void MainWindow::showReverseEquationDialog() {
+  if (!m_reverseEquationDialog) {
+    m_reverseEquationDialog = new ReverseEquationDialog(scene, this);
+    connect(m_reverseEquationDialog, &ReverseEquationDialog::circuitGenerated, this, [this](const QRectF &bounds) {
+      statusBar()->showMessage("Circuit generated from equation. Click 'Simulate' (F5) to evaluate.", 4000);
+      if (!bounds.isEmpty()) {
+        ui->graphicsView->centerOn(bounds.center());
+        ui->graphicsView->update();
+      }
+      scene->update();
+    });
+  }
+  m_reverseEquationDialog->show();
+  m_reverseEquationDialog->raise();
+  m_reverseEquationDialog->activateWindow();
+}
