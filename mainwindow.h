@@ -46,6 +46,7 @@ private slots:
     void openCircuit();
     void saveCircuit();
     void saveCircuitAs();
+    void showLogicalEquation();
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);
@@ -58,6 +59,7 @@ private:
     ElementType currentTool = ElementType::None;
     QMap<ElementType, class QToolButton*> toolButtons;
     QString currentFilePath;
+    class EquationDialog *m_equationDialog = nullptr;
 };
 
 #endif // MAINWINDOW_H

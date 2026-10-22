@@ -69,6 +69,11 @@ set(PROJECT_SOURCES
         logic/CircuitDAG.cpp
         logic/CircuitAdapter.h
         logic/CircuitAdapter.cpp
+        logic/EquationGenerator.h
+        logic/EquationGenerator.cpp
+
+        EquationDialog.h
+        EquationDialog.cpp
 
         resources.qrc
 

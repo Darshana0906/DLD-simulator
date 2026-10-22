@@ -17,6 +17,7 @@
 #include "gates/XnorGate.h"
 #include "gates/XorGate.h"
 #include "logic/CircuitAdapter.h"
+#include "EquationDialog.h"
 #include "overlapping.h"
 #include <QAction>
 #include <QDir>
@@ -314,6 +315,23 @@ MainWindow::MainWindow(QWidget *parent)
   topControlBar->addAction(simulateAction);
   connect(simulateAction, &QAction::triggered, this,
           &MainWindow::runSimulation);
+
+  topControlBar->addSeparator();
+
+  QAction *showTagsAction = new QAction("🏷  Show Tags", this);
+  showTagsAction->setCheckable(true);
+  showTagsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
+  showTagsAction->setToolTip("Show/hide node labels S#, G#, Y# on circuit components (Ctrl+T)");
+  topControlBar->addAction(showTagsAction);
+  connect(showTagsAction, &QAction::toggled, this, [this](bool checked) {
+      scene->setShowTags(checked);
+  });
+
+  QAction *equationAction = new QAction("📐  Logical Equation", this);
+  equationAction->setShortcut(QKeySequence(Qt::Key_F6));
+  equationAction->setToolTip("Derive Boolean logical equation from the circuit (F6)");
+  topControlBar->addAction(equationAction);
+  connect(equationAction, &QAction::triggered, this, &MainWindow::showLogicalEquation);
 
   topControlBar->addSeparator();
 
@@ -676,4 +694,16 @@ void MainWindow::saveCircuitAs() {
                           QString("Failed to save circuit:\n%1").arg(errorMsg));
   }
 }
+
+void MainWindow::showLogicalEquation() {
+  if (!m_equationDialog) {
+    m_equationDialog = new EquationDialog(scene->getAdapter(), this);
+  } else {
+    m_equationDialog->refresh();
+  }
+  m_equationDialog->show();
+  m_equationDialog->raise();
+  m_equationDialog->activateWindow();
+}
+
 

@@ -25,6 +25,9 @@ public:
     void setWireToolActive(bool active);
     bool isWireToolActive() const { return m_wireToolActive; }
 
+    void setShowTags(bool show);
+    bool showTags() const { return m_showTags; }
+
     // Delete a single item (and its attached wires) cleanly
     void deleteItem(QGraphicsItem *item);
     // Delete all currently selected items (components + wires)
@@ -48,6 +51,7 @@ protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void drawBackground(QPainter *painter, const QRectF &rect) override;
+    void drawForeground(QPainter *painter, const QRectF &rect) override;
 
 private:
     void clearSelectionBox();
@@ -56,6 +60,7 @@ private:
 
     bool m_placementMode = false;
     bool m_wireToolActive = false;
+    bool m_showTags = false;
     SelectionBox *m_activeSelectionBox = nullptr;
     GroupSelectionBox *m_groupSelectionBox = nullptr;
 

@@ -38,6 +38,7 @@ public:
     int registerItem(QGraphicsItem *item, int preferredId = -1);
     int getNodeId(QGraphicsItem *item) const;
     QGraphicsItem* getItem(int id) const;
+    const std::unordered_map<int, QGraphicsItem*>& getItems() const { return m_idToItem; }
     void unregisterItem(QGraphicsItem *item);
     bool hasItem(QGraphicsItem *item) const;
     size_t getNodeCount() const { return m_nodes.size(); }
