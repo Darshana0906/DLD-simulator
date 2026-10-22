@@ -3,8 +3,12 @@
 
 #include <QMainWindow>
 #include <QPointF>
+#include <QMap>
 
 class CircuitScene;
+class UndoManager;
+class QToolButton;
+class QAction;
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -46,18 +50,25 @@ private slots:
     void openCircuit();
     void saveCircuit();
     void saveCircuitAs();
+    void undo();
+    void redo();
 
 private:
     void setPlacementTool(ElementType type, const QString &elementName);
     bool placeElement(ElementType type, const QPointF &pos);
     void updateToolButtonHighlights(ElementType activeType);
     void updateWindowTitle();
+    bool confirmDiscardChanges();
 
     Ui::MainWindow *ui;
     CircuitScene *scene;
     ElementType currentTool = ElementType::None;
-    QMap<ElementType, class QToolButton*> toolButtons;
+    QMap<ElementType, QToolButton*> toolButtons;
     QString currentFilePath;
+
+    UndoManager *undoManager = nullptr;
+    QAction *undoAction = nullptr;
+    QAction *redoAction = nullptr;
 };
 
 #endif // MAINWINDOW_H

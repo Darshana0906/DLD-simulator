@@ -1,3 +1,4 @@
+#include "CircuitScene.h"
 #include "SelectionBox.h"
 #include "overlapping.h"
 #include "elements/Point.h"
@@ -150,6 +151,7 @@ void SelectionBox::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 
     prepareGeometryChange();
     update();
+
     event->accept();
     return;
   }
@@ -163,6 +165,7 @@ void SelectionBox::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     updateItemWires(m_targetItem);
     prepareGeometryChange();
     update();
+
     event->accept();
     return;
   }
