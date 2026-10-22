@@ -49,6 +49,8 @@ CircuitReadiness EquationGenerator::checkReadiness(const CircuitAdapter *adapter
             gateCount++;
             int expectedInputs = static_cast<int>(gateNode->inputCount());
             const auto &inEdges = dag.getIncomingEdges(id);
+            QString gTag = adapter->getTag(id);
+            if (gTag.isEmpty()) gTag = QString("G%1").arg(id);
 
             std::vector<bool> pinConnected(expectedInputs, false);
             for (const Edge &e : inEdges) {
@@ -60,14 +62,14 @@ CircuitReadiness EquationGenerator::checkReadiness(const CircuitAdapter *adapter
             for (int p = 0; p < expectedInputs; ++p) {
                 if (!pinConnected[p]) {
                     result.isReady = false;
-                    result.issues.append(QString("Gate G%1: Input pin %2 is open / not connected.").arg(id).arg(p + 1));
+                    result.issues.append(QString("Gate %1: Input pin %2 is open / not connected.").arg(gTag).arg(p + 1));
                 }
             }
 
             const auto &outEdges = dag.getOutgoingEdges(id);
             if (outEdges.empty()) {
                 result.isReady = false;
-                result.issues.append(QString("Gate G%1: Output is open / not connected to anything.").arg(id));
+                result.issues.append(QString("Gate %1: Output is open / not connected to anything.").arg(gTag));
             }
         }
         // 3. Check LEDs: Input pin must be connected
@@ -83,7 +85,9 @@ CircuitReadiness EquationGenerator::checkReadiness(const CircuitAdapter *adapter
             }
             if (!hasInput) {
                 result.isReady = false;
-                result.issues.append(QString("Output Y%1: Input pin is open / not connected.").arg(id));
+                QString yTag = adapter->getTag(id);
+                if (yTag.isEmpty()) yTag = QString("Y%1").arg(id);
+                result.issues.append(QString("Output %1: Input pin is open / not connected.").arg(yTag));
             }
         }
         // 4. Check Switches: Output should be connected to something
@@ -91,7 +95,9 @@ CircuitReadiness EquationGenerator::checkReadiness(const CircuitAdapter *adapter
             const auto &outEdges = dag.getOutgoingEdges(id);
             if (outEdges.empty()) {
                 result.isReady = false;
-                result.issues.append(QString("Switch S%1: Output is open / not connected to any gate.").arg(id));
+                QString sTag = adapter->getTag(id);
+                if (sTag.isEmpty()) sTag = QString("S%1").arg(id);
+                result.issues.append(QString("Switch %1: Output is open / not connected to any gate.").arg(sTag));
             }
         }
     }
@@ -141,7 +147,8 @@ QString EquationGenerator::buildExpression(int nodeId, const CircuitAdapter *ada
 
     if (type == NodeType::INPUT_SWITCH) {
         visited.erase(nodeId);
-        return QString("S%1").arg(nodeId);
+        QString tag = adapter->getTag(nodeId);
+        return tag.isEmpty() ? QString("S%1").arg(nodeId) : tag;
     }
     if (type == NodeType::INPUT_CONST1) {
         visited.erase(nodeId);
@@ -169,7 +176,7 @@ QString EquationGenerator::buildExpression(int nodeId, const CircuitAdapter *ada
 
         auto wrapIfNeeded = [](const QString &s) -> QString {
             if (s.isEmpty()) return s;
-            if (s.length() <= 3 && !s.contains(' ') && !s.contains('+')) {
+            if (!s.contains(' ') && !s.contains('+') && !s.contains(QString::fromUtf8("·")) && !s.contains(QString::fromUtf8("⊕")) && !s.contains(QString::fromUtf8("⊙"))) {
                 return s; // single atom like "S1", "0", "1"
             }
             if (s.startsWith('(') && s.endsWith(')')) {
@@ -181,7 +188,7 @@ QString EquationGenerator::buildExpression(int nodeId, const CircuitAdapter *ada
         if (type == NodeType::GATE_NOT) {
             QString inner = pinExprs.empty() ? "?" : pinExprs[0];
             if (algebraic) {
-                if (inner.length() <= 3 && !inner.contains(' ') && !inner.contains('+')) {
+                if (!inner.contains(' ') && !inner.contains('+') && !inner.contains(QString::fromUtf8("·")) && !inner.contains(QString::fromUtf8("⊕")) && !inner.contains(QString::fromUtf8("⊙"))) {
                     return inner + "'";
                 }
                 return wrapIfNeeded(inner) + "'";
@@ -193,8 +200,10 @@ QString EquationGenerator::buildExpression(int nodeId, const CircuitAdapter *ada
         QString opSymbol = algebraic ? QString::fromUtf8(" · ") : " AND ";
         if (type == NodeType::GATE_OR || type == NodeType::GATE_NOR) {
             opSymbol = algebraic ? " + " : " OR ";
-        } else if (type == NodeType::GATE_XOR || type == NodeType::GATE_XNOR) {
+        } else if (type == NodeType::GATE_XOR) {
             opSymbol = algebraic ? QString::fromUtf8(" ⊕ ") : " XOR ";
+        } else if (type == NodeType::GATE_XNOR) {
+            opSymbol = algebraic ? QString::fromUtf8(" ⊙ ") : " XNOR ";
         }
 
         QString combined;
@@ -204,12 +213,6 @@ QString EquationGenerator::buildExpression(int nodeId, const CircuitAdapter *ada
         }
 
         if (type == NodeType::GATE_NAND || type == NodeType::GATE_NOR) {
-            if (algebraic) {
-                return QString("(%1)'").arg(combined);
-            } else {
-                return QString("NOT (%1)").arg(combined);
-            }
-        } else if (type == NodeType::GATE_XNOR) {
             if (algebraic) {
                 return QString("(%1)'").arg(combined);
             } else {
@@ -266,10 +269,12 @@ EquationReport EquationGenerator::generate(const CircuitAdapter *adapter) {
 
         OutputEquation eq;
         eq.nodeId = id;
-        eq.outputTag = QString("Y%1").arg(id);
+        QString yTag = adapter->getTag(id);
+        if (yTag.isEmpty()) yTag = QString("Y%1").arg(id);
+        eq.outputTag = yTag;
         eq.algebraicExpr = alg;
         eq.booleanExpr = bExpr;
-        eq.fullEquation = QString("Y%1 = %2").arg(id).arg(alg);
+        eq.fullEquation = QString("%1 = %2").arg(yTag).arg(alg);
 
         report.equations.push_back(eq);
     }

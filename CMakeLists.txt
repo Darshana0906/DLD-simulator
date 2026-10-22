@@ -61,6 +61,8 @@ set(PROJECT_SOURCES
         elements/Const1.cpp
         elements/Switch.h
         elements/Switch.cpp
+        elements/NodeTagItem.h
+        elements/NodeTagItem.cpp
 
         logic/LogicTypes.h
         logic/Node.h

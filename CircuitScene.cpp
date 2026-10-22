@@ -7,6 +7,7 @@
 #include "elements/Input.h"
 #include "elements/Switch.h"
 #include "elements/LED.h"
+#include "elements/NodeTagItem.h"
 #include "gates/Gate.h"
 #include "logic/CircuitAdapter.h"
 #include <QPainter>
@@ -542,80 +543,14 @@ void CircuitScene::drawBackground(QPainter *painter, const QRectF &rect) {
 void CircuitScene::setShowTags(bool show) {
     if (m_showTags != show) {
         m_showTags = show;
-        update();
+        for (QGraphicsItem *item : items()) {
+            if (NodeTagItem *tag = dynamic_cast<NodeTagItem*>(item)) {
+                tag->setVisible(show);
+            }
+        }
     }
 }
 
 void CircuitScene::drawForeground(QPainter *painter, const QRectF &rect) {
     QGraphicsScene::drawForeground(painter, rect);
-    if (!m_showTags || !m_adapter) return;
-
-    painter->save();
-    painter->setRenderHint(QPainter::Antialiasing);
-
-    QFont tagFont;
-    tagFont.setBold(true);
-    tagFont.setPixelSize(12);
-    QFontMetrics fm(tagFont);
-    painter->setFont(tagFont);
-
-    // Visible but not loud: indigo text, solid white fill, 1.5px indigo border
-    const QColor bgColor(255, 255, 255, 240);
-    const QColor borderColor(67, 56, 202);   // indigo-700
-    const QColor tailColor(99, 102, 241, 200); // indigo-500, semi-transparent
-    const QColor textColor(49, 46, 129);     // indigo-900
-
-    for (const auto &pair : m_adapter->getItems()) {
-        int id = pair.first;
-        QGraphicsItem *item = pair.second;
-        if (!item || !item->scene()) continue;
-
-        QString tag;
-        QPointF anchorPos; // scene position the tail points to
-
-        if (Switch *sw = dynamic_cast<Switch*>(item)) {
-            tag = QString("S%1").arg(id);
-            anchorPos = sw->mapToScene(QPointF(50, 20)); // output pin terminal
-        } else if (Gate *gate = dynamic_cast<Gate*>(item)) {
-            tag = QString("G%1").arg(id);
-            anchorPos = gate->mapToScene(QPointF(50, 0)); // top centre of gate body
-        } else if (LED *led = dynamic_cast<LED*>(item)) {
-            tag = QString("Y%1").arg(id);
-            anchorPos = led->mapToScene(QPointF(-5, 25)); // input pin terminal
-        } else {
-            continue; // GND, Const1 — no tag
-        }
-
-        int textW = fm.horizontalAdvance(tag);
-        qreal boxW = textW + 14.0;
-        qreal boxH = 20.0;
-
-        // Badge floats 16px above and 6px to the right of the anchor point
-        qreal boxX = anchorPos.x() + 6.0;
-        qreal boxY = anchorPos.y() - boxH - 16.0;
-        QRectF boxRect(boxX, boxY, boxW, boxH);
-
-        // Pointer tail
-        QPainterPath tail;
-        tail.moveTo(boxX + 2.0, boxY + boxH);
-        tail.lineTo(boxX + 10.0, boxY + boxH);
-        tail.lineTo(anchorPos);
-        tail.closeSubpath();
-
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(tailColor);
-        painter->drawPath(tail);
-
-        // Badge background — solid white with indigo border
-        painter->setBrush(bgColor);
-        painter->setPen(QPen(borderColor, 1.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter->drawRoundedRect(boxRect, 4.0, 4.0);
-
-        // Label text
-        painter->setPen(textColor);
-        painter->setFont(tagFont);
-        painter->drawText(boxRect, Qt::AlignCenter, tag);
-    }
-
-    painter->restore();
 }

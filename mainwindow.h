@@ -60,6 +60,7 @@ private:
     QMap<ElementType, class QToolButton*> toolButtons;
     QString currentFilePath;
     class EquationDialog *m_equationDialog = nullptr;
+    class QAction *m_selectAction = nullptr;
 };
 
 #endif // MAINWINDOW_H

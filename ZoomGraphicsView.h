@@ -22,6 +22,9 @@ public:
     // Apply the correct cursor right now based on state.
     void applyCursor();
 
+    void setSelectMode(bool active);
+    bool isSelectMode() const { return m_isSelectMode; }
+
 protected:
     bool viewportEvent(QEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
@@ -38,6 +41,7 @@ private:
 
     bool m_isPanning = false;
     bool m_spacePressed = false;
+    bool m_isSelectMode = false;
     QPoint m_panStartPos;
 
     static constexpr double kZoomMin = 0.1;   // 10%

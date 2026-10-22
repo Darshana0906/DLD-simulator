@@ -39,6 +39,7 @@ public:
     int getNodeId(QGraphicsItem *item) const;
     QGraphicsItem* getItem(int id) const;
     const std::unordered_map<int, QGraphicsItem*>& getItems() const { return m_idToItem; }
+    QString getTag(int nodeId) const;
     void unregisterItem(QGraphicsItem *item);
     bool hasItem(QGraphicsItem *item) const;
     size_t getNodeCount() const { return m_nodes.size(); }
@@ -142,6 +143,12 @@ private:
     // Wire-to-Edge mapping: each completed wire is stored as a directed Edge
     std::unordered_map<Wire*, Edge>                    m_wireToEdge;
     std::vector<Edge>                                  m_edges;
+
+    // Independent 1-based counters for visual tags
+    int                                                m_switchCounter = 0;
+    int                                                m_gateCounter = 0;
+    int                                                m_ledCounter = 0;
+    std::unordered_map<int, QString>                   m_nodeTags;
 
     // Helper: resolve a pin to its Edge endpoint
     bool resolvePinToEndpoint(Point *pin, int &nodeId, int &pinIndex, bool &isOutput) const;

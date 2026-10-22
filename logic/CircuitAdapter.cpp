@@ -7,6 +7,7 @@
 #include "../elements/LED.h"
 #include "../elements/Point.h"
 #include "../elements/Wire.h"
+#include "../elements/NodeTagItem.h"
 #include "../gates/Gate.h"
 #include "../gates/AndGate.h"
 #include "../gates/OrGate.h"
@@ -83,7 +84,59 @@ int CircuitAdapter::registerItem(QGraphicsItem *item, int preferredId) {
     }
 
     m_dag.addNode(id);
+
+    // Attach or update child NodeTagItem on the visual item with independent counters
+    QString tagText;
+    QPointF tagAnchor;
+
+    auto itTag = m_nodeTags.find(id);
+    if (itTag != m_nodeTags.end()) {
+        tagText = itTag->second;
+    } else {
+        if (dynamic_cast<Switch*>(item)) {
+            tagText = QString("S%1").arg(++m_switchCounter);
+        } else if (dynamic_cast<Gate*>(item)) {
+            tagText = QString("G%1").arg(++m_gateCounter);
+        } else if (dynamic_cast<LED*>(item)) {
+            tagText = QString("Y%1").arg(++m_ledCounter);
+        }
+        if (!tagText.isEmpty()) {
+            m_nodeTags[id] = tagText;
+        }
+    }
+
+    if (dynamic_cast<Switch*>(item)) {
+        tagAnchor = QPointF(50, 20);
+    } else if (dynamic_cast<Gate*>(item)) {
+        tagAnchor = QPointF(20, 0);
+    } else if (dynamic_cast<LED*>(item)) {
+        tagAnchor = QPointF(-5, 25);
+    }
+
+    if (!tagText.isEmpty()) {
+        NodeTagItem *existingTag = nullptr;
+        for (QGraphicsItem *child : item->childItems()) {
+            if (NodeTagItem *t = dynamic_cast<NodeTagItem*>(child)) {
+                existingTag = t;
+                break;
+            }
+        }
+        if (existingTag) {
+            existingTag->setTagText(tagText);
+        } else {
+            NodeTagItem *tagItem = new NodeTagItem(tagText, tagAnchor, item);
+            if (m_scene) {
+                tagItem->setVisible(m_scene->showTags());
+            }
+        }
+    }
+
     return id;
+}
+
+QString CircuitAdapter::getTag(int nodeId) const {
+    auto it = m_nodeTags.find(nodeId);
+    return (it != m_nodeTags.end()) ? it->second : QString();
 }
 
 int CircuitAdapter::getNodeId(QGraphicsItem *item) const {
@@ -142,6 +195,7 @@ void CircuitAdapter::unregisterItem(QGraphicsItem *item) {
         m_idToItem.erase(id);
         m_nodes.erase(id);
         m_itemToId.erase(it);
+        m_nodeTags.erase(id);
 
         emit simulationInvalidated();
     }
@@ -248,6 +302,10 @@ void CircuitAdapter::clear() {
     m_idToItem.clear();
     m_itemToId.clear();
     m_nextId = 0;
+    m_switchCounter = 0;
+    m_gateCounter = 0;
+    m_ledCounter = 0;
+    m_nodeTags.clear();
     emit simulationInvalidated();
 }
 

@@ -85,14 +85,20 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::toggleFullScreenMode);
   addAction(fullScreenAction);
 
-  // Escape shortcut (Esc): cancel placement or clear selection regardless of canvas focus
+  // Escape shortcut (Esc): cancel placement, clear selection, or exit select mode
   QAction *escapeAction = new QAction(this);
   escapeAction->setShortcut(QKeySequence(Qt::Key_Escape));
   connect(escapeAction, &QAction::triggered, this, [this]() {
-    if (scene->isPlacementMode()) {
+    if (scene->isPlacementMode() || scene->isWireToolActive()) {
       cancelPlacement();
     } else if (!scene->selectedItems().isEmpty()) {
       scene->clearSelection();
+    } else if (ui->graphicsView->isSelectMode()) {
+      if (m_selectAction) {
+        m_selectAction->setChecked(false);
+      }
+      ui->graphicsView->setSelectMode(false);
+      statusBar()->showMessage("Paw Tool (Default): Drag on canvas to pan view.", 2000);
     }
   });
   addAction(escapeAction);
@@ -308,6 +314,29 @@ MainWindow::MainWindow(QWidget *parent)
   topControlBar->addAction(saveAction);
   topControlBar->addSeparator();
 
+  QAction *selectAction = new QAction("↖  Select", this);
+  selectAction->setCheckable(true);
+  selectAction->setShortcut(QKeySequence(Qt::Key_S));
+  selectAction->setToolTip("Select Tool: Click and drag to select and move components (S)\nWhen unselected, default Paw (Pan) mode is active.");
+  m_selectAction = selectAction;
+  topControlBar->addAction(selectAction);
+
+  connect(selectAction, &QAction::toggled, this, [this](bool checked) {
+    if (checked) {
+      if (currentTool != ElementType::None) {
+        cancelPlacement();
+      }
+      ui->graphicsView->setSelectMode(true);
+      statusBar()->showMessage("Select Tool: Click items to select/move, or drag on canvas for box selection.", 3000);
+    } else {
+      scene->clearSelection();
+      ui->graphicsView->setSelectMode(false);
+      statusBar()->showMessage("Paw Tool (Default): Drag on canvas to pan view.", 3000);
+    }
+  });
+
+  topControlBar->addSeparator();
+
   QAction *simulateAction = new QAction("▶  Simulate Circuit", this);
   simulateAction->setShortcut(QKeySequence(Qt::Key_F5));
   simulateAction->setToolTip(
@@ -384,6 +413,12 @@ void MainWindow::setPlacementTool(ElementType type,
                                   const QString &elementName) {
   currentTool = type;
   updateToolButtonHighlights(type);
+  if (m_selectAction && m_selectAction->isChecked()) {
+    m_selectAction->blockSignals(true);
+    m_selectAction->setChecked(false);
+    m_selectAction->blockSignals(false);
+  }
+  ui->graphicsView->setSelectMode(false);
   if (type == ElementType::Wire) {
     scene->setWireToolActive(true);
     scene->setPlacementMode(false);
@@ -417,6 +452,12 @@ void MainWindow::cancelPlacement() {
   updateToolButtonHighlights(ElementType::None);
   scene->setWireToolActive(false);
   scene->setPlacementMode(false);
+  if (m_selectAction && m_selectAction->isChecked()) {
+    m_selectAction->blockSignals(true);
+    m_selectAction->setChecked(false);
+    m_selectAction->blockSignals(false);
+  }
+  ui->graphicsView->setSelectMode(false);
   ui->graphicsView->applyCursor();
   statusBar()->clearMessage();
 }
