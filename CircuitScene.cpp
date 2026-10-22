@@ -219,6 +219,7 @@ void CircuitScene::onPointClicked(Point *point) {
         if (m_adapter) {
             m_adapter->onWireConnected(wire);
         }
+        emit circuitModified();
     }
 }
 
@@ -283,6 +284,10 @@ void CircuitScene::deleteItem(QGraphicsItem *item) {
 
     removeItem(item);
     delete item;
+
+    if (!m_inBatchOperation) {
+        emit circuitModified();
+    }
 }
 
 void CircuitScene::deleteSelectedItems() {
@@ -306,6 +311,8 @@ void CircuitScene::deleteSelectedItems() {
         }
     }
 
+    m_inBatchOperation = true;
+
     // 1. Delete solid components first (deleteItem also deletes their attached wires)
     for (QGraphicsItem *comp : components) {
         if (comp && items().contains(comp)) {
@@ -320,10 +327,14 @@ void CircuitScene::deleteSelectedItems() {
         }
     }
 
+    m_inBatchOperation = false;
+
     if (m_adapter) {
         m_adapter->resetOutputsToNeutral();
         emit m_adapter->simulationInvalidated();
     }
+
+    emit circuitModified();
 }
 
 void CircuitScene::clearCircuit() {
@@ -334,6 +345,7 @@ void CircuitScene::clearCircuit() {
     if (m_adapter) {
         m_adapter->clear();
     }
+    emit circuitModified();
 }
 
 void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
@@ -478,6 +490,13 @@ void CircuitScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
     QGraphicsScene::mouseMoveEvent(event);
 }
 
+void CircuitScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
+    QGraphicsScene::mouseReleaseEvent(event);
+    if (event->button() == Qt::LeftButton && !m_placementMode && !m_wireToolActive) {
+        emit circuitModified();
+    }
+}
+
 void CircuitScene::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Escape) {
         if (m_wireStartPoint) {
@@ -495,6 +514,21 @@ void CircuitScene::keyPressEvent(QKeyEvent *event) {
             event->accept();
             return;
         }
+    }
+
+    // Ctrl+Z: Undo
+    if (event->key() == Qt::Key_Z && (event->modifiers() & Qt::ControlModifier) && !(event->modifiers() & Qt::ShiftModifier)) {
+        emit undoRequested();
+        event->accept();
+        return;
+    }
+
+    // Ctrl+Y or Ctrl+Shift+Z: Redo
+    if ((event->key() == Qt::Key_Y && (event->modifiers() & Qt::ControlModifier)) ||
+        (event->key() == Qt::Key_Z && (event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier)) == (Qt::ControlModifier | Qt::ShiftModifier))) {
+        emit redoRequested();
+        event->accept();
+        return;
     }
 
     // Ctrl+A: Select All components and wires on canvas

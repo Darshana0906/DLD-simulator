@@ -68,5 +68,8 @@ void Switch::mousePressEvent(QGraphicsSceneMouseEvent *event) {
         return;
     }
     setValue(!getValue());
+    if (cs) {
+        emit cs->circuitModified();
+    }
     QGraphicsItem::mousePressEvent(event);
 }

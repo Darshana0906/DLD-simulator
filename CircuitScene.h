@@ -42,6 +42,9 @@ signals:
     void sceneClicked(const QPointF &pos);
     void placementCancelled();
     void errorMessage(const QString &msg);
+    void circuitModified();
+    void undoRequested();
+    void redoRequested();
 
 private slots:
     void onSelectionChanged();
@@ -49,6 +52,7 @@ private slots:
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void drawBackground(QPainter *painter, const QRectF &rect) override;
     void drawForeground(QPainter *painter, const QRectF &rect) override;

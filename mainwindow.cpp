@@ -3,6 +3,7 @@
 #include "CircuitScene.h"
 #include "CircuitSerializer.h"
 #include "ZoomGraphicsView.h"
+#include "UndoManager.h"
 #include "elements/Const1.h"
 #include "elements/GND.h"
 #include "elements/LED.h"
@@ -60,6 +61,20 @@ MainWindow::MainWindow(QWidget *parent)
     layout->setSpacing(0);
     layout->addWidget(ui->graphicsView);
   }
+
+  undoManager = new UndoManager(scene, this);
+  connect(scene, &CircuitScene::circuitModified, undoManager, [this]() {
+    undoManager->pushState();
+  });
+  connect(scene, &CircuitScene::undoRequested, this, &MainWindow::undo);
+  connect(scene, &CircuitScene::redoRequested, this, &MainWindow::redo);
+  connect(undoManager, &UndoManager::stateRestored, this, [this]() {
+    if (scene && scene->getAdapter()) {
+      scene->getAdapter()->resetOutputsToNeutral();
+      emit scene->getAdapter()->simulationInvalidated();
+    }
+    statusBar()->showMessage("Action undone / redone.", 2000);
+  });
 
   // Connect CircuitScene signals for click-to-place
   connect(scene, &CircuitScene::sceneClicked, this,
@@ -305,9 +320,43 @@ MainWindow::MainWindow(QWidget *parent)
   fileMenu->addAction(exitAction);
   connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
+  // Undo & Redo Actions
+  undoAction = new QAction(QIcon(":/icons/undo.png"), "Undo", this);
+  undoAction->setShortcut(QKeySequence::Undo); // Ctrl+Z
+  undoAction->setToolTip("Undo last action (Ctrl+Z)");
+  undoAction->setEnabled(false);
+  connect(undoAction, &QAction::triggered, this, &MainWindow::undo);
+
+  redoAction = new QAction(QIcon(":/icons/redo.png"), "Redo", this);
+  redoAction->setShortcuts({QKeySequence(Qt::CTRL | Qt::Key_Y), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Z)});
+  redoAction->setToolTip("Redo last undone action (Ctrl+Y)");
+  redoAction->setEnabled(false);
+  connect(redoAction, &QAction::triggered, this, &MainWindow::redo);
+
+  connect(undoManager, &UndoManager::canUndoChanged, undoAction, &QAction::setEnabled);
+  connect(undoManager, &UndoManager::canRedoChanged, redoAction, &QAction::setEnabled);
+
+  // Menu Bar: Edit Menu
+  QMenu *editMenu = menuBar()->addMenu("&Edit");
+  editMenu->addAction(undoAction);
+  editMenu->addAction(redoAction);
+  editMenu->addSeparator();
+  QAction *selectAllAction = new QAction("Select All", this);
+  selectAllAction->setShortcut(QKeySequence::SelectAll);
+  editMenu->addAction(selectAllAction);
+  connect(selectAllAction, &QAction::triggered, this, [this]() {
+    for (QGraphicsItem *item : scene->items()) {
+      if (isSolidComponent(item) || dynamic_cast<Wire *>(item)) {
+        item->setSelected(true);
+      }
+    }
+  });
+
   // Top Controls Toolbar
   QToolBar *topControlBar = new QToolBar("Circuit Controls", this);
   topControlBar->setMovable(false);
+  topControlBar->setIconSize(QSize(20, 20));
+  topControlBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
   addToolBar(Qt::TopToolBarArea, topControlBar);
 
   topControlBar->addAction(newAction);
@@ -500,6 +549,7 @@ bool MainWindow::placeElement(ElementType type, const QPointF &pos) {
     end->setPos(pos.x() + 50, pos.y());
     Wire *wire = new Wire(start, end);
     scene->addItem(wire);
+    emit scene->circuitModified();
     return true;
   }
 
@@ -571,6 +621,7 @@ bool MainWindow::placeElement(ElementType type, const QPointF &pos) {
   if (scene->getAdapter()) {
     scene->getAdapter()->registerItem(item);
   }
+  emit scene->circuitModified();
   return true;
 }
 
@@ -645,6 +696,9 @@ void MainWindow::newCircuit() {
   scene->clearCircuit();
   currentFilePath.clear();
   updateWindowTitle();
+  if (undoManager) {
+    undoManager->resetInitialState();
+  }
   statusBar()->showMessage("New circuit created.", 2500);
 }
 
@@ -665,6 +719,9 @@ void MainWindow::openCircuit() {
   if (CircuitSerializer::loadFromFile(fileName, scene, &errorMsg)) {
     currentFilePath = fileName;
     updateWindowTitle();
+    if (undoManager) {
+      undoManager->resetInitialState();
+    }
     statusBar()->showMessage(QString("Loaded circuit from %1").arg(QFileInfo(fileName).fileName()), 3500);
   } else {
     QMessageBox::critical(this, "Error Opening Circuit",
