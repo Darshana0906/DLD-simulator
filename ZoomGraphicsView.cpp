@@ -39,7 +39,7 @@ void ZoomGraphicsView::applyCursor()
         viewport()->setCursor(Qt::OpenHandCursor);
     } else if (m_circuitScene && (m_circuitScene->isPlacementMode() || m_circuitScene->isWireToolActive())) {
         viewport()->setCursor(Qt::CrossCursor);
-    } else if (m_isSelectMode) {
+    } else {
         // If an item has grabbed the mouse (e.g. dragging a resize handle),
         // maintain its cursor during the drag gesture.
         if (m_circuitScene && m_circuitScene->mouseGrabberItem()) {
@@ -63,12 +63,16 @@ void ZoomGraphicsView::applyCursor()
         }
         if (cursorItem) {
             viewport()->setCursor(cursorItem->cursor());
-        } else {
+        } else if (!itemList.isEmpty()) {
             viewport()->setCursor(Qt::ArrowCursor);
+        } else {
+            // Hovering over empty canvas
+            if (m_isSelectMode) {
+                viewport()->setCursor(Qt::CrossCursor);
+            } else {
+                viewport()->setCursor(Qt::OpenHandCursor);
+            }
         }
-    } else {
-        // Default when no element is selected: PAW
-        viewport()->setCursor(Qt::OpenHandCursor);
     }
 }
 
@@ -172,40 +176,31 @@ void ZoomGraphicsView::mousePressEvent(QMouseEvent *event)
             return;
         }
 
-        if (m_isSelectMode) {
-            // Check whether there is anything under the cursor
-            QGraphicsItem *hit = itemAt(event->pos());
+        QGraphicsItem *hit = itemAt(event->pos());
 
-            if (hit == nullptr) {
-                // Empty canvas → start rubberband selection
-                setDragMode(QGraphicsView::RubberBandDrag);
-            } else {
-                // Item under cursor → let the scene handle dragging it
-                setDragMode(QGraphicsView::NoDrag);
-            }
+        if (hit != nullptr) {
+            // Clicking directly on an individual element (Gate, Wire, LED bulb, Switch, etc.):
+            // Forward directly to scene so user can select, move, or toggle it without needing
+            // to click the Select tool button first!
+            setDragMode(QGraphicsView::NoDrag);
+            QGraphicsView::mousePressEvent(event);
+            applyCursor();
+            return;
+        }
+
+        // Empty canvas clicked:
+        if (m_isSelectMode) {
+            // Select mode active: dragging draws a rectangular rubberband selection box
+            setDragMode(QGraphicsView::RubberBandDrag);
             QGraphicsView::mousePressEvent(event);
             applyCursor();
             return;
         } else {
-            // Default: PAW mode
+            // Default mode: deselect previous items if any, then pan canvas
+            if (m_circuitScene && !m_circuitScene->selectedItems().isEmpty()) {
+                m_circuitScene->clearSelection();
+            }
             setDragMode(QGraphicsView::NoDrag);
-
-            // Allow interactive switch click to toggle
-            QGraphicsItem *hit = itemAt(event->pos());
-            Switch *sw = nullptr;
-            if (hit) {
-                if (Switch *s = dynamic_cast<Switch*>(hit)) sw = s;
-                else if (hit->topLevelItem()) sw = dynamic_cast<Switch*>(hit->topLevelItem());
-            }
-
-            if (sw) {
-                sw->setValue(!sw->getValue());
-                event->accept();
-                applyCursor();
-                return;
-            }
-
-            // Otherwise, anywhere else pans the canvas
             m_isPanning = true;
             m_panStartPos = event->pos();
             viewport()->setCursor(Qt::ClosedHandCursor);

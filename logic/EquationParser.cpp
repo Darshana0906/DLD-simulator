@@ -108,7 +108,7 @@ std::vector<Token> EquationParser::tokenize(const QString &line, int lineOffset,
         } else if (ch == '+') {
             tokens.push_back({TokenType::OP_OR, "+", tokenStart});
             i++;
-        } else if (ch == '*') {
+        } else if (ch == '*' || ch == '.') {
             tokens.push_back({TokenType::OP_AND, "*", tokenStart});
             i++;
         } else if (ch == '^') {
@@ -132,14 +132,21 @@ std::vector<Token> EquationParser::tokenize(const QString &line, int lineOffset,
             tokens.push_back({TokenType::OP_XNOR, QString::fromUtf8("⊙"), tokenStart});
             i++;
         }
-        // Variable names: start with a letter, may contain letters and digits (e.g. A, B, S1, X2, IN0)
+        // Variable names: only 'S' (input switches) and 'Y' (LED output / feedback) variables allowed
         else if (ch.isLetter()) {
             int start = i;
             while (i < len && (line[i].isLetterOrNumber() || line[i] == '_')) {
                 i++;
             }
             QString name = line.mid(start, i - start);
-            tokens.push_back({TokenType::VARIABLE, name, tokenStart});
+
+            if (!name.startsWith('S', Qt::CaseInsensitive) && !name.startsWith('Y', Qt::CaseInsensitive)) {
+                error = QString("Invalid variable '%1'. Only 'S' (switches, e.g. S1, S2) and 'Y' (LED outputs, e.g. Y1, Y2) are allowed.").arg(name);
+                errorPos = tokenStart;
+                return {};
+            }
+
+            tokens.push_back({TokenType::VARIABLE, name.toUpper(), tokenStart});
         }
         // Constants: '0' or '1'
         else if (ch == '0') {
@@ -347,39 +354,72 @@ ParseResult EquationParser::parse(const QString &input) {
             continue;
         }
 
-        // Try to extract output name: "Y = expr" or "Y1 = expr"
+        // Try to extract output name: "Y = expr", "Y1 = expr", "y1 - expr", "Y1 -> expr"
         QString outputName;
         QString exprPart = line;
 
         int eqIdx = line.indexOf('=');
+        int sepLen = 1;
+        if (eqIdx < 0) {
+            eqIdx = line.indexOf("->");
+            if (eqIdx >= 0) {
+                sepLen = 2;
+            } else {
+                // Check for '-' separator (e.g. "y1 - s1.y1")
+                eqIdx = line.indexOf('-');
+                sepLen = 1;
+            }
+        }
+
         if (eqIdx > 0) {
             QString lhs = line.left(eqIdx).trimmed();
-            // Validate LHS is a valid identifier (e.g. Y, Y1, OUT1)
             QRegularExpression identRe("^[A-Za-z][A-Za-z0-9_]*$");
             if (identRe.match(lhs).hasMatch()) {
-                outputName = lhs;
-                exprPart = line.mid(eqIdx + 1).trimmed();
+                outputName = lhs.toUpper();
+                exprPart = line.mid(eqIdx + sepLen).trimmed();
+            }
+        }
+
+        // Validate output name: must start with 'Y' (corresponds to output element / LED)
+        if (!outputName.isEmpty()) {
+            if (!outputName.startsWith('Y')) {
+                result.success = false;
+                result.errorMessage = QString("Equation output '%1' must start with 'Y' (e.g. Y1, Y2). 'S' is reserved for input switches.").arg(outputName);
+                result.errorPosition = lineOffset;
+                return result;
+            }
+        } else {
+            outputName = QString("Y%1").arg(result.equations.size() + 1);
+        }
+
+        // Prevent duplicate output definitions
+        for (const auto &existingEq : result.equations) {
+            if (existingEq.outputName == outputName) {
+                result.success = false;
+                result.errorMessage = QString("Duplicate output '%1'. Each equation must define a unique 'Y' output.").arg(outputName);
+                result.errorPosition = lineOffset;
+                return result;
             }
         }
 
         if (exprPart.isEmpty()) {
             result.success = false;
-            result.errorMessage = QString("Empty expression after '=' on line: %1").arg(line);
-            result.errorPosition = lineOffset + eqIdx + 1;
+            result.errorMessage = QString("Empty expression for '%1' on line: %2").arg(outputName).arg(line);
+            result.errorPosition = lineOffset + (eqIdx >= 0 ? eqIdx + sepLen : 0);
             return result;
         }
 
         // Tokenize the expression part
         QString tokenError;
         int tokenErrorPos = -1;
-        int exprOffset = lineOffset + (eqIdx >= 0 ? eqIdx + 1 : 0);
+        int exprOffset = lineOffset + (eqIdx >= 0 ? eqIdx + sepLen : 0);
 
-        // Adjust for whitespace between = and expression
+        // Adjust for whitespace between separator and expression
         if (eqIdx >= 0) {
             int skip = 0;
-            QString afterEq = line.mid(eqIdx + 1);
-            while (skip < afterEq.length() && afterEq[skip].isSpace()) skip++;
-            exprOffset = lineOffset + eqIdx + 1 + skip;
+            QString afterSep = line.mid(eqIdx + sepLen);
+            while (skip < afterSep.length() && afterSep[skip].isSpace()) skip++;
+            exprOffset = lineOffset + eqIdx + sepLen + skip;
         }
 
         auto tokens = tokenize(exprPart, exprOffset, tokenError, tokenErrorPos);
@@ -415,11 +455,6 @@ ParseResult EquationParser::parse(const QString &input) {
                 .arg(state.current().position);
             result.errorPosition = state.current().position;
             return result;
-        }
-
-        // Auto-name output if not provided
-        if (outputName.isEmpty()) {
-            outputName = QString("Y%1").arg(result.equations.size() + 1);
         }
 
         ParsedEquation eq;
