@@ -367,7 +367,7 @@ MainWindow::MainWindow(QWidget *parent)
   QAction *selectAction = new QAction("↖  Select", this);
   selectAction->setCheckable(true);
   selectAction->setShortcut(QKeySequence(Qt::Key_S));
-  selectAction->setToolTip("Select Tool: Click and drag to select and move components (S)\nWhen unselected, default Paw (Pan) mode is active.");
+  selectAction->setToolTip("Box Select Tool: Drag a rectangle on canvas to select multiple elements (S)\n(Individual elements can always be clicked, selected, and moved in default mode)");
   m_selectAction = selectAction;
   topControlBar->addAction(selectAction);
 
@@ -377,11 +377,11 @@ MainWindow::MainWindow(QWidget *parent)
         cancelPlacement();
       }
       ui->graphicsView->setSelectMode(true);
-      statusBar()->showMessage("Select Tool: Click items to select/move, or drag on canvas for box selection.", 3000);
+      statusBar()->showMessage("Box Select Tool: Drag a rectangle on empty canvas to select multiple elements.", 3000);
     } else {
       scene->clearSelection();
       ui->graphicsView->setSelectMode(false);
-      statusBar()->showMessage("Paw Tool (Default): Drag on canvas to pan view.", 3000);
+      statusBar()->showMessage("Default Mode: Click items to select/move, or drag empty canvas to pan view.", 3000);
     }
   });
 

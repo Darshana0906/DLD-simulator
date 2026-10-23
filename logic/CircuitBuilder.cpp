@@ -151,7 +151,7 @@ QString CircuitBuilder::getSignature(const ASTNode *node) const {
     if (!node) return "";
 
     if (node->type == ASTNodeType::VARIABLE) {
-        return QString("VAR:%1").arg(node->variableName);
+        return QString("VAR:%1").arg(node->variableName.toUpper());
     }
     if (node->type == ASTNodeType::CONST_0) {
         return "CONST:0";
@@ -193,37 +193,57 @@ CircuitBuilder::BuildInfo CircuitBuilder::buildNode(const ASTNode *node, int dep
     BuildInfo info;
     if (!node) return info;
 
-    // ----- Leaf: Variable (Switch) -----
+    // ----- Leaf: Variable (Switch for S, or Output Reference for Y) -----
     if (node->type == ASTNodeType::VARIABLE) {
-        // Reuse existing switch if same variable name was already created
-        auto it = m_variableToSwitch.find(node->variableName);
-        if (it != m_variableToSwitch.end()) {
-            if (Switch *sw = dynamic_cast<Switch*>(it->second)) {
-                info.item = sw;
-                info.outputPin = sw->getOutputPoint();
+        QString varUpper = node->variableName.toUpper();
+
+        if (varUpper.startsWith('S')) {
+            // Reuse existing switch if same switch name was already created
+            auto it = m_variableToSwitch.find(varUpper);
+            if (it != m_variableToSwitch.end()) {
+                if (Switch *sw = dynamic_cast<Switch*>(it->second)) {
+                    info.item = sw;
+                    info.outputPin = sw->getOutputPoint();
+                    info.depth = 0;
+                    return info;
+                }
+            }
+
+            Switch *sw = new Switch();
+            qreal x = xForLayer(0);
+            qreal y = nextYForLayer(0);
+            placeItem(sw, x, y);
+
+            m_variableToSwitch[varUpper] = sw;
+
+            if (m_adapter) {
+                int nodeId = m_adapter->getNodeId(sw);
+                if (nodeId >= 0) {
+                    m_adapter->setTag(nodeId, varUpper);
+                }
+            }
+
+            info.item = sw;
+            info.outputPin = sw->getOutputPoint();
+            info.depth = 0;
+            return info;
+        } else if (varUpper.startsWith('Y')) {
+            // Output variable reference: corresponds to an output element (LED) / equation output signal
+            auto it = m_outputPins.find(varUpper);
+            if (it != m_outputPins.end() && it->second != nullptr) {
+                info.item = nullptr;
+                info.outputPin = it->second;
+                info.depth = 0;
+                return info;
+            } else {
+                // Not built yet (cyclic self-reference or forward reference)
+                info.item = nullptr;
+                info.outputPin = nullptr;
+                info.pendingYVar = varUpper;
                 info.depth = 0;
                 return info;
             }
         }
-
-        Switch *sw = new Switch();
-        qreal x = xForLayer(0);
-        qreal y = nextYForLayer(0);
-        placeItem(sw, x, y);
-
-        m_variableToSwitch[node->variableName] = sw;
-
-        if (m_adapter) {
-            int nodeId = m_adapter->getNodeId(sw);
-            if (nodeId >= 0) {
-                m_adapter->setTag(nodeId, node->variableName);
-            }
-        }
-
-        info.item = sw;
-        info.outputPin = sw->getOutputPoint();
-        info.depth = 0;
-        return info;
     }
 
     // ----- Leaf: Constant 0 (GND) - Reused across whole circuit -----
@@ -296,6 +316,9 @@ CircuitBuilder::BuildInfo CircuitBuilder::buildNode(const ASTNode *node, int dep
     for (int i = 0; i < static_cast<int>(childInfos.size()) && i < inputPins.size(); ++i) {
         if (childInfos[i].outputPin) {
             wireConnect(childInfos[i].outputPin, inputPins[i]);
+        } else if (!childInfos[i].pendingYVar.isEmpty()) {
+            // Pending connection for Y output variable (e.g. feedback in cyclic circuit)
+            m_pendingYConnections.push_back({inputPins[i], childInfos[i].pendingYVar});
         }
     }
 
@@ -336,10 +359,18 @@ BuildResult CircuitBuilder::build(const std::vector<ParsedEquation> &equations) 
     m_const1Item = nullptr;
     m_builtSubexpressions.clear();
     m_layerItemCount.clear();
+    m_pendingYConnections.clear();
+    m_outputPins.clear();
     m_gatesCreated = 0;
     m_wiresCreated = 0;
 
-    // First pass: collect all variables across all equations and pre-create switches
+    // Set of defined outputs
+    QSet<QString> definedOutputs;
+    for (const auto &eq : equations) {
+        definedOutputs.insert(eq.outputName.toUpper());
+    }
+
+    // First pass: collect all variables across all equations
     QStringList allVars;
     int totalDepth = 0;
     for (const auto &eq : equations) {
@@ -347,8 +378,34 @@ BuildResult CircuitBuilder::build(const std::vector<ParsedEquation> &equations) 
         totalDepth = std::max(totalDepth, computeDepth(eq.root.get()));
     }
 
-    // Pre-create switches for all variables (layer 0)
-    for (const QString &varName : allVars) {
+    // Validate variables:
+    // S variables -> switches
+    // Y variables -> must correspond to a defined equation output
+    QStringList sVars;
+    for (const QString &var : allVars) {
+        QString uVar = var.toUpper();
+        if (uVar.startsWith('S')) {
+            if (!sVars.contains(uVar)) {
+                sVars.append(uVar);
+            }
+        } else if (uVar.startsWith('Y')) {
+            if (!definedOutputs.contains(uVar)) {
+                result.success = false;
+                result.errorMessage = QString("Output variable '%1' is used in an equation, but has no defining equation. Please provide an equation for %1.").arg(uVar);
+                return result;
+            }
+        } else {
+            result.success = false;
+            result.errorMessage = QString("Invalid variable '%1'. Only 'S' (switches) and 'Y' (LEDs) variables are allowed.").arg(var);
+            return result;
+        }
+    }
+
+    // Sort switch variables naturally
+    std::sort(sVars.begin(), sVars.end());
+
+    // Pre-create switches ONLY for S variables (layer 0)
+    for (const QString &varName : sVars) {
         if (m_variableToSwitch.find(varName) == m_variableToSwitch.end()) {
             Switch *sw = new Switch();
             qreal x = xForLayer(0);
@@ -374,13 +431,14 @@ BuildResult CircuitBuilder::build(const std::vector<ParsedEquation> &equations) 
     // Build each equation
     for (const auto &eq : equations) {
         if (!eq.root) continue;
+        QString outName = eq.outputName.toUpper();
 
         // Build the expression tree
         BuildInfo exprInfo = buildNode(eq.root.get(), 0);
 
-        if (!exprInfo.outputPin) {
+        if (!exprInfo.outputPin && exprInfo.pendingYVar.isEmpty()) {
             result.success = false;
-            result.errorMessage = QString("Failed to build expression for output '%1'.").arg(eq.outputName);
+            result.errorMessage = QString("Failed to build expression for output '%1'.").arg(outName);
             return result;
         }
 
@@ -394,13 +452,49 @@ BuildResult CircuitBuilder::build(const std::vector<ParsedEquation> &equations) 
         if (m_adapter) {
             int nodeId = m_adapter->getNodeId(led);
             if (nodeId >= 0) {
-                QString outTag = eq.outputName.isEmpty() ? QString("Y%1").arg(ledsCreated) : eq.outputName;
-                m_adapter->setTag(nodeId, outTag);
+                m_adapter->setTag(nodeId, outName);
             }
         }
 
-        // Wire the expression output to the LED input
-        wireConnect(exprInfo.outputPin, led->getInputPoint());
+        if (exprInfo.outputPin) {
+            m_outputPins[outName] = exprInfo.outputPin;
+            // Wire the expression output to the LED input
+            wireConnect(exprInfo.outputPin, led->getInputPoint());
+        } else if (!exprInfo.pendingYVar.isEmpty()) {
+            // Direct alias Y1 = Y2: wire to LED once Y2 is known
+            m_pendingYConnections.push_back({led->getInputPoint(), exprInfo.pendingYVar});
+        }
+    }
+
+    // Resolve any direct output aliases (e.g. Y1 = Y2)
+    bool resolvedAny = true;
+    while (resolvedAny) {
+        resolvedAny = false;
+        for (const auto &eq : equations) {
+            QString outName = eq.outputName.toUpper();
+            if (m_outputPins.find(outName) == m_outputPins.end()) {
+                if (eq.root && eq.root->type == ASTNodeType::VARIABLE) {
+                    QString srcY = eq.root->variableName.toUpper();
+                    auto it = m_outputPins.find(srcY);
+                    if (it != m_outputPins.end() && it->second != nullptr) {
+                        m_outputPins[outName] = it->second;
+                        resolvedAny = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Connect all pending Y variable connections (including cyclic feedback loops)
+    for (const auto &pending : m_pendingYConnections) {
+        auto it = m_outputPins.find(pending.yVarName);
+        if (it != m_outputPins.end() && it->second != nullptr) {
+            wireConnect(it->second, pending.targetInputPin);
+        } else {
+            result.success = false;
+            result.errorMessage = QString("Unresolved output connection for '%1'.").arg(pending.yVarName);
+            return result;
+        }
     }
 
     // Extract DAG graph connections and refresh tags

@@ -65,7 +65,16 @@ private:
         QGraphicsItem *item = nullptr;   // the Gate, Switch, GND, Const1 that was created
         Point *outputPin = nullptr;       // the output pin to wire from
         int depth = 0;                    // depth in AST (for layering)
+        QString pendingYVar;             // if waiting for an output pin from a Y variable
     };
+
+    struct PendingYConnection {
+        Point *targetInputPin = nullptr;
+        QString yVarName;
+    };
+
+    std::vector<PendingYConnection> m_pendingYConnections;
+    std::unordered_map<QString, Point*> m_outputPins;
 
     // Common Subexpression Elimination (CSE) cache: signature -> BuildInfo
     std::unordered_map<QString, BuildInfo> m_builtSubexpressions;
