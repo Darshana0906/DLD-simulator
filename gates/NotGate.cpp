@@ -18,11 +18,23 @@ QPainterPath NotGate::getPath() const {
     return path;
 }
 
+void NotGate::setInputCount(int count) {
+    Q_UNUSED(count);
+    // NOT gate always has exactly 1 input at y = 26 (center y = 31)
+    if (getInputPins().isEmpty()) {
+        addInputPin(-29, 26);
+    } else {
+        getInputPins()[0]->setPos(-29, 26);
+    }
+    update();
+}
+
 void NotGate::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *) {
     painter->setPen(Qt::black);
     painter->setBrush(Qt::white);
     painter->drawPath(getPath());
-    painter->drawLine(-20, 30, 0, 30);
+    qreal y = getInputPins().isEmpty() ? 31.0 : (getInputPins()[0]->y() + 5.0);
+    painter->drawLine(-20, y, 0, y);
     painter->drawLine(90, 30, 100, 30);
 }
 
