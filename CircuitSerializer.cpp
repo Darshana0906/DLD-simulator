@@ -116,8 +116,13 @@ QByteArray CircuitSerializer::serializeToJson(CircuitScene *scene) {
         compObj["type"] = compType;
         compObj["x"] = item->pos().x();
         compObj["y"] = item->pos().y();
+        if (item->scale() != 1.0) {
+            compObj["scale"] = item->scale();
+        }
 
-        if (Switch *sw = dynamic_cast<Switch*>(item)) {
+        if (Gate *g = dynamic_cast<Gate*>(item)) {
+            compObj["inputCount"] = g->getInputCount();
+        } else if (Switch *sw = dynamic_cast<Switch*>(item)) {
             compObj["state"] = sw->getValue();
         } else if (LED *led = dynamic_cast<LED*>(item)) {
             compObj["state"] = led->getState();
@@ -202,7 +207,11 @@ bool CircuitSerializer::deserializeFromJson(const QByteArray &jsonData, CircuitS
 
         item->setPos(x, y);
 
-        if (Switch *sw = dynamic_cast<Switch*>(item)) {
+        if (Gate *g = dynamic_cast<Gate*>(item)) {
+            if (compObj.contains("inputCount")) {
+                g->setInputCount(compObj.value("inputCount").toInt());
+            }
+        } else if (Switch *sw = dynamic_cast<Switch*>(item)) {
             if (compObj.contains("state")) {
                 sw->setValue(compObj.value("state").toBool());
             }
@@ -210,6 +219,10 @@ bool CircuitSerializer::deserializeFromJson(const QByteArray &jsonData, CircuitS
             if (compObj.contains("state")) {
                 led->setState(compObj.value("state").toBool());
             }
+        }
+
+        if (compObj.contains("scale")) {
+            item->setScale(compObj.value("scale").toDouble());
         }
 
         scene->addItem(item);

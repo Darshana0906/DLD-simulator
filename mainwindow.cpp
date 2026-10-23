@@ -2,6 +2,9 @@
 #include "./ui_mainwindow.h"
 #include "CircuitScene.h"
 #include "CircuitSerializer.h"
+#include "EquationDialog.h"
+#include "ReverseEquationDialog.h"
+#include "UndoManager.h"
 #include "ZoomGraphicsView.h"
 #include "elements/Const1.h"
 #include "elements/GND.h"
@@ -27,11 +30,11 @@
 #include <QIcon>
 #include <QKeySequence>
 #include <QLabel>
-#include <QRegularExpression>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QSize>
 #include <QStatusBar>
 #include <QToolBar>
@@ -61,6 +64,19 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(ui->graphicsView);
   }
 
+  undoManager = new UndoManager(scene, this);
+  connect(scene, &CircuitScene::circuitModified, undoManager,
+          [this]() { undoManager->pushState(); });
+  connect(scene, &CircuitScene::undoRequested, this, &MainWindow::undo);
+  connect(scene, &CircuitScene::redoRequested, this, &MainWindow::redo);
+  connect(undoManager, &UndoManager::stateRestored, this, [this]() {
+    if (scene && scene->getAdapter()) {
+      scene->getAdapter()->resetOutputsToNeutral();
+      emit scene->getAdapter()->simulationInvalidated();
+    }
+    statusBar()->showMessage("Action undone / redone.", 2000);
+  });
+
   // Connect CircuitScene signals for click-to-place
   connect(scene, &CircuitScene::sceneClicked, this,
           &MainWindow::onSceneClicked);
@@ -86,7 +102,8 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::toggleFullScreenMode);
   addAction(fullScreenAction);
 
-  // Escape shortcut (Esc): cancel placement, clear selection, or exit select mode
+  // Escape shortcut (Esc): cancel placement, clear selection, or exit select
+  // mode
   QAction *escapeAction = new QAction(this);
   escapeAction->setShortcut(QKeySequence(Qt::Key_Escape));
   connect(escapeAction, &QAction::triggered, this, [this]() {
@@ -99,7 +116,8 @@ MainWindow::MainWindow(QWidget *parent)
         m_selectAction->setChecked(false);
       }
       ui->graphicsView->setSelectMode(false);
-      statusBar()->showMessage("Paw Tool (Default): Drag on canvas to pan view.", 2000);
+      statusBar()->showMessage(
+          "Paw Tool (Default): Drag on canvas to pan view.", 2000);
     }
   });
   addAction(escapeAction);
@@ -305,20 +323,60 @@ MainWindow::MainWindow(QWidget *parent)
   fileMenu->addAction(exitAction);
   connect(exitAction, &QAction::triggered, this, &QWidget::close);
 
+  // Undo & Redo Actions
+  undoAction = new QAction(QIcon(":/icons/undo.png"), "Undo", this);
+  undoAction->setShortcut(QKeySequence::Undo); // Ctrl+Z
+  undoAction->setToolTip("Undo last action (Ctrl+Z)");
+  undoAction->setEnabled(false);
+  connect(undoAction, &QAction::triggered, this, &MainWindow::undo);
+
+  redoAction = new QAction(QIcon(":/icons/redo.png"), "Redo", this);
+  redoAction->setShortcuts({QKeySequence(Qt::CTRL | Qt::Key_Y),
+                            QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Z)});
+  redoAction->setToolTip("Redo last undone action (Ctrl+Y)");
+  redoAction->setEnabled(false);
+  connect(redoAction, &QAction::triggered, this, &MainWindow::redo);
+
+  connect(undoManager, &UndoManager::canUndoChanged, undoAction,
+          &QAction::setEnabled);
+  connect(undoManager, &UndoManager::canRedoChanged, redoAction,
+          &QAction::setEnabled);
+
+  // Menu Bar: Edit Menu
+  QMenu *editMenu = menuBar()->addMenu("&Edit");
+  editMenu->addAction(undoAction);
+  editMenu->addAction(redoAction);
+  editMenu->addSeparator();
+  QAction *selectAllAction = new QAction("Select All", this);
+  selectAllAction->setShortcut(QKeySequence::SelectAll);
+  editMenu->addAction(selectAllAction);
+  connect(selectAllAction, &QAction::triggered, this, [this]() {
+    for (QGraphicsItem *item : scene->items()) {
+      if (isSolidComponent(item) || dynamic_cast<Wire *>(item)) {
+        item->setSelected(true);
+      }
+    }
+  });
+
   // Top Controls Toolbar
   QToolBar *topControlBar = new QToolBar("Circuit Controls", this);
   topControlBar->setMovable(false);
+  topControlBar->setIconSize(QSize(20, 20));
+  topControlBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
   addToolBar(Qt::TopToolBarArea, topControlBar);
 
   topControlBar->addAction(newAction);
   topControlBar->addAction(openAction);
   topControlBar->addAction(saveAction);
   topControlBar->addSeparator();
-
+  topControlBar->addAction(undoAction);
+  topControlBar->addAction(redoAction);
   QAction *selectAction = new QAction("↖  Select", this);
   selectAction->setCheckable(true);
   selectAction->setShortcut(QKeySequence(Qt::Key_S));
-  selectAction->setToolTip("Select Tool: Click and drag to select and move components (S)\nWhen unselected, default Paw (Pan) mode is active.");
+  selectAction->setToolTip(
+      "Select Tool: Click and drag to select and move components (S)\nWhen "
+      "unselected, default Paw (Pan) mode is active.");
   m_selectAction = selectAction;
   topControlBar->addAction(selectAction);
 
@@ -328,11 +386,14 @@ MainWindow::MainWindow(QWidget *parent)
         cancelPlacement();
       }
       ui->graphicsView->setSelectMode(true);
-      statusBar()->showMessage("Select Tool: Click items to select/move, or drag on canvas for box selection.", 3000);
+      statusBar()->showMessage("Select Tool: Click items to select/move, or "
+                               "drag on canvas for box selection.",
+                               3000);
     } else {
       scene->clearSelection();
       ui->graphicsView->setSelectMode(false);
-      statusBar()->showMessage("Paw Tool (Default): Drag on canvas to pan view.", 3000);
+      statusBar()->showMessage(
+          "Paw Tool (Default): Drag on canvas to pan view.", 3000);
     }
   });
 
@@ -351,17 +412,27 @@ MainWindow::MainWindow(QWidget *parent)
   QAction *showTagsAction = new QAction("🏷  Show Tags", this);
   showTagsAction->setCheckable(true);
   showTagsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_T));
-  showTagsAction->setToolTip("Show/hide node labels S#, G#, Y# on circuit components (Ctrl+T)");
+  showTagsAction->setToolTip(
+      "Show/hide node labels S#, G#, Y# on circuit components (Ctrl+T)");
   topControlBar->addAction(showTagsAction);
-  connect(showTagsAction, &QAction::toggled, this, [this](bool checked) {
-      scene->setShowTags(checked);
-  });
+  connect(showTagsAction, &QAction::toggled, this,
+          [this](bool checked) { scene->setShowTags(checked); });
 
   QAction *equationAction = new QAction("📐  Logical Equation", this);
   equationAction->setShortcut(QKeySequence(Qt::Key_F6));
-  equationAction->setToolTip("Derive Boolean logical equation from the circuit (F6)");
+  equationAction->setToolTip(
+      "Derive Boolean logical equation from the circuit (F6)");
   topControlBar->addAction(equationAction);
-  connect(equationAction, &QAction::triggered, this, &MainWindow::showLogicalEquation);
+  connect(equationAction, &QAction::triggered, this,
+          &MainWindow::showLogicalEquation);
+
+  QAction *reverseEquationAction = new QAction("📐  Equation → Circuit", this);
+  reverseEquationAction->setShortcut(QKeySequence(Qt::Key_F7));
+  reverseEquationAction->setToolTip(
+      "Generate a circuit from a Boolean equation (F7)");
+  topControlBar->addAction(reverseEquationAction);
+  connect(reverseEquationAction, &QAction::triggered, this,
+          &MainWindow::showReverseEquationDialog);
 
   QAction *truthTableAction = new QAction("📊  Truth Table", this);
   truthTableAction->setShortcut(QKeySequence(Qt::Key_F7));
@@ -472,12 +543,11 @@ void MainWindow::cancelPlacement() {
 void MainWindow::updateToolButtonHighlights(ElementType activeType) {
   for (auto it = toolButtons.begin(); it != toolButtons.end(); ++it) {
     if (it.key() == activeType) {
-      it.value()->setStyleSheet(
-          "QToolButton {"
-          "  border: 2px solid #2196F3;"
-          "  background-color: #E3F2FD;"
-          "  border-radius: 4px;"
-          "}");
+      it.value()->setStyleSheet("QToolButton {"
+                                "  border: 2px solid #2196F3;"
+                                "  background-color: #E3F2FD;"
+                                "  border-radius: 4px;"
+                                "}");
     } else {
       it.value()->setStyleSheet("");
     }
@@ -500,6 +570,7 @@ bool MainWindow::placeElement(ElementType type, const QPointF &pos) {
     end->setPos(pos.x() + 50, pos.y());
     Wire *wire = new Wire(start, end);
     scene->addItem(wire);
+    emit scene->circuitModified();
     return true;
   }
 
@@ -571,6 +642,7 @@ bool MainWindow::placeElement(ElementType type, const QPointF &pos) {
   if (scene->getAdapter()) {
     scene->getAdapter()->registerItem(item);
   }
+  emit scene->circuitModified();
   return true;
 }
 
@@ -629,15 +701,16 @@ void MainWindow::updateWindowTitle() {
   if (currentFilePath.isEmpty()) {
     setWindowTitle("DLD Simulator - Untitled");
   } else {
-    setWindowTitle(QString("DLD Simulator - %1").arg(QFileInfo(currentFilePath).fileName()));
+    setWindowTitle(QString("DLD Simulator - %1")
+                       .arg(QFileInfo(currentFilePath).fileName()));
   }
 }
 
 void MainWindow::newCircuit() {
   if (!scene->items().isEmpty()) {
-    if (QMessageBox::question(
-            this, "New Circuit",
-            "Do you want to create a new circuit? Any unsaved changes will be lost.") !=
+    if (QMessageBox::question(this, "New Circuit",
+                              "Do you want to create a new circuit? Any "
+                              "unsaved changes will be lost.") !=
         QMessageBox::Yes) {
       return;
     }
@@ -645,6 +718,9 @@ void MainWindow::newCircuit() {
   scene->clearCircuit();
   currentFilePath.clear();
   updateWindowTitle();
+  if (undoManager) {
+    undoManager->resetInitialState();
+  }
   statusBar()->showMessage("New circuit created.", 2500);
 }
 
@@ -657,7 +733,8 @@ void MainWindow::newWindow() {
 void MainWindow::openCircuit() {
   QString fileName = QFileDialog::getOpenFileName(
       this, "Open Circuit File", QString(),
-      "Editable Vector Circuit (*.svg);;All Supported Files (*.svg *.dld *.json);;All Files (*)");
+      "Editable Vector Circuit (*.svg);;All Supported Files (*.svg *.dld "
+      "*.json);;All Files (*)");
   if (fileName.isEmpty())
     return;
 
@@ -665,7 +742,12 @@ void MainWindow::openCircuit() {
   if (CircuitSerializer::loadFromFile(fileName, scene, &errorMsg)) {
     currentFilePath = fileName;
     updateWindowTitle();
-    statusBar()->showMessage(QString("Loaded circuit from %1").arg(QFileInfo(fileName).fileName()), 3500);
+    if (undoManager) {
+      undoManager->resetInitialState();
+    }
+    statusBar()->showMessage(
+        QString("Loaded circuit from %1").arg(QFileInfo(fileName).fileName()),
+        3500);
   } else {
     QMessageBox::critical(this, "Error Opening Circuit",
                           QString("Failed to load circuit:\n%1").arg(errorMsg));
@@ -682,7 +764,8 @@ static QString getSuggestedSavePath(const QString &currentPath) {
     dir = fi.absolutePath();
     baseName = fi.completeBaseName();
     suffix = fi.suffix();
-    if (suffix.isEmpty()) suffix = "svg";
+    if (suffix.isEmpty())
+      suffix = "svg";
   }
 
   // If baseName ends with a number (e.g. "circuit2"), increment it
@@ -697,15 +780,18 @@ static QString getSuggestedSavePath(const QString &currentPath) {
 
   // If currentPath is empty and "circuit.svg" doesn't exist, use that
   if (currentPath.isEmpty()) {
-    QString candidate = QDir(dir).filePath(QString("%1.%2").arg(baseName, suffix));
+    QString candidate =
+        QDir(dir).filePath(QString("%1.%2").arg(baseName, suffix));
     if (!QFile::exists(candidate)) {
       return candidate;
     }
   }
 
-  // Find the next available non-existing candidate prefixN.svg (e.g. circuit2.svg, circuit3.svg)
+  // Find the next available non-existing candidate prefixN.svg (e.g.
+  // circuit2.svg, circuit3.svg)
   while (true) {
-    QString candidate = QDir(dir).filePath(QString("%1%2.%3").arg(prefix).arg(nextNum).arg(suffix));
+    QString candidate = QDir(dir).filePath(
+        QString("%1%2.%3").arg(prefix).arg(nextNum).arg(suffix));
     if (!QFile::exists(candidate)) {
       return candidate;
     }
@@ -713,17 +799,14 @@ static QString getSuggestedSavePath(const QString &currentPath) {
   }
 }
 
-void MainWindow::saveCircuit() {
-  saveCircuitAs();
-}
+void MainWindow::saveCircuit() { saveCircuitAs(); }
 
 void MainWindow::saveCircuitAs() {
   QString defaultPath = getSuggestedSavePath(currentFilePath);
   QString selectedFilter;
   QString fileName = QFileDialog::getSaveFileName(
       this, "Save Circuit As", defaultPath,
-      "Editable Vector Circuit (*.svg);;All Files (*)",
-      &selectedFilter);
+      "Editable Vector Circuit (*.svg);;All Files (*)", &selectedFilter);
   if (fileName.isEmpty())
     return;
 
@@ -736,10 +819,22 @@ void MainWindow::saveCircuitAs() {
   if (CircuitSerializer::saveToFile(fileName, scene, &errorMsg)) {
     currentFilePath = fileName;
     updateWindowTitle();
-    statusBar()->showMessage(QString("Saved circuit to %1").arg(QFileInfo(fileName).fileName()), 3500);
+    statusBar()->showMessage(
+        QString("Saved circuit to %1").arg(QFileInfo(fileName).fileName()),
+        3500);
   } else {
     QMessageBox::critical(this, "Error Saving Circuit",
                           QString("Failed to save circuit:\n%1").arg(errorMsg));
+  }
+}
+void MainWindow::undo() {
+  if (undoManager && undoManager->canUndo()) {
+    undoManager->undo();
+  }
+}
+void MainWindow::redo() {
+  if (undoManager && undoManager->canRedo()) {
+    undoManager->redo();
   }
 }
 
@@ -766,3 +861,22 @@ void MainWindow::showTruthTable() {
 }
 
 
+void MainWindow::showReverseEquationDialog() {
+  if (!m_reverseEquationDialog) {
+    m_reverseEquationDialog = new ReverseEquationDialog(scene, this);
+    connect(m_reverseEquationDialog, &ReverseEquationDialog::circuitGenerated,
+            this, [this](const QRectF &bounds) {
+              statusBar()->showMessage("Circuit generated from equation. Click "
+                                       "'Simulate' (F5) to evaluate.",
+                                       4000);
+              if (!bounds.isEmpty()) {
+                ui->graphicsView->centerOn(bounds.center());
+                ui->graphicsView->update();
+              }
+              scene->update();
+            });
+  }
+  m_reverseEquationDialog->show();
+  m_reverseEquationDialog->raise();
+  m_reverseEquationDialog->activateWindow();
+}

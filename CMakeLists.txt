@@ -8,6 +8,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
@@ -24,6 +25,8 @@ set(PROJECT_SOURCES
         SelectionBox.cpp
         GroupSelectionBox.h
         GroupSelectionBox.cpp
+        UndoManager.h
+        UndoManager.cpp
 
         ZoomGraphicsView.cpp
         ZoomGraphicsView.h
@@ -73,12 +76,17 @@ set(PROJECT_SOURCES
         logic/CircuitAdapter.cpp
         logic/EquationGenerator.h
         logic/EquationGenerator.cpp
-
+        logic/EquationParser.h
+        logic/EquationParser.cpp
+        logic/CircuitBuilder.h
+        logic/CircuitBuilder.cpp
         EquationDialog.h
         EquationDialog.cpp
         TruthTableDialog.h
         TruthTableDialog.cpp
 
+        ReverseEquationDialog.h
+        ReverseEquationDialog.cpp
         resources.qrc
 
 )

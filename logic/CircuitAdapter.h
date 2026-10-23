@@ -40,6 +40,7 @@ public:
     QGraphicsItem* getItem(int id) const;
     const std::unordered_map<int, QGraphicsItem*>& getItems() const { return m_idToItem; }
     QString getTag(int nodeId) const;
+    void setTag(int nodeId, const QString &tag);
     void unregisterItem(QGraphicsItem *item);
     bool hasItem(QGraphicsItem *item) const;
     size_t getNodeCount() const { return m_nodes.size(); }
