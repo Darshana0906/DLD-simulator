@@ -10,6 +10,7 @@ class CircuitScene;
 class ReverseEquationDialog;
 class UndoManager;
 class EquationDialog;
+class TruthTableDialog;
 class QAction;
 
 QT_BEGIN_NAMESPACE
@@ -65,14 +66,6 @@ private:
   void updateWindowTitle();
   bool confirmDiscardChanges();
 
-    Ui::MainWindow *ui;
-    CircuitScene *scene;
-    ElementType currentTool = ElementType::None;
-    QMap<ElementType, class QToolButton*> toolButtons;
-    QString currentFilePath;
-    class EquationDialog *m_equationDialog = nullptr;
-    class TruthTableDialog *m_truthTableDialog = nullptr;
-    class QAction *m_selectAction = nullptr;
   Ui::MainWindow *ui;
   CircuitScene *scene;
   ElementType currentTool = ElementType::None;
@@ -81,9 +74,10 @@ private:
   UndoManager *undoManager = nullptr;
   QAction *undoAction = nullptr;
   QAction *redoAction = nullptr;
-  class EquationDialog *m_equationDialog = nullptr;
+  EquationDialog *m_equationDialog = nullptr;
   ReverseEquationDialog *m_reverseEquationDialog = nullptr;
-  class QAction *m_selectAction = nullptr;
+  TruthTableDialog *m_truthTableDialog = nullptr;
+  QAction *m_selectAction = nullptr;
 };
 
 #endif // MAINWINDOW_H
