@@ -56,6 +56,7 @@ private slots:
   void redo();
   void showLogicalEquation();
   void showReverseEquationDialog();
+  void showTruthTable();
 
 private:
   void setPlacementTool(ElementType type, const QString &elementName);
@@ -64,6 +65,14 @@ private:
   void updateWindowTitle();
   bool confirmDiscardChanges();
 
+    Ui::MainWindow *ui;
+    CircuitScene *scene;
+    ElementType currentTool = ElementType::None;
+    QMap<ElementType, class QToolButton*> toolButtons;
+    QString currentFilePath;
+    class EquationDialog *m_equationDialog = nullptr;
+    class TruthTableDialog *m_truthTableDialog = nullptr;
+    class QAction *m_selectAction = nullptr;
   Ui::MainWindow *ui;
   CircuitScene *scene;
   ElementType currentTool = ElementType::None;

@@ -20,6 +20,8 @@
 #include "gates/XnorGate.h"
 #include "gates/XorGate.h"
 #include "logic/CircuitAdapter.h"
+#include "EquationDialog.h"
+#include "TruthTableDialog.h"
 #include "overlapping.h"
 #include <QAction>
 #include <QDir>
@@ -432,6 +434,12 @@ MainWindow::MainWindow(QWidget *parent)
   connect(reverseEquationAction, &QAction::triggered, this,
           &MainWindow::showReverseEquationDialog);
 
+  QAction *truthTableAction = new QAction("📊  Truth Table", this);
+  truthTableAction->setShortcut(QKeySequence(Qt::Key_F7));
+  truthTableAction->setToolTip("Open interactive Truth Table synchronized with circuit (F7)");
+  topControlBar->addAction(truthTableAction);
+  connect(truthTableAction, &QAction::triggered, this, &MainWindow::showTruthTable);
+
   topControlBar->addSeparator();
 
   QAction *clearAction = new QAction("🗑  Clear Circuit", this);
@@ -840,6 +848,18 @@ void MainWindow::showLogicalEquation() {
   m_equationDialog->raise();
   m_equationDialog->activateWindow();
 }
+
+void MainWindow::showTruthTable() {
+  if (!m_truthTableDialog) {
+    m_truthTableDialog = new TruthTableDialog(scene->getAdapter(), this);
+  } else {
+    m_truthTableDialog->refresh();
+  }
+  m_truthTableDialog->show();
+  m_truthTableDialog->raise();
+  m_truthTableDialog->activateWindow();
+}
+
 
 void MainWindow::showReverseEquationDialog() {
   if (!m_reverseEquationDialog) {

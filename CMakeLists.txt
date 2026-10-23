@@ -82,6 +82,8 @@ set(PROJECT_SOURCES
         logic/CircuitBuilder.cpp
         EquationDialog.h
         EquationDialog.cpp
+        TruthTableDialog.h
+        TruthTableDialog.cpp
 
         ReverseEquationDialog.h
         ReverseEquationDialog.cpp
