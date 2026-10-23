@@ -8,6 +8,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
@@ -81,6 +82,8 @@ set(PROJECT_SOURCES
         logic/CircuitBuilder.cpp
         EquationDialog.h
         EquationDialog.cpp
+        TruthTableDialog.h
+        TruthTableDialog.cpp
 
         ReverseEquationDialog.h
         ReverseEquationDialog.cpp

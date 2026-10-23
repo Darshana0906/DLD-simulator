@@ -5,6 +5,7 @@
 class NotGate : public Gate {
 public:
     NotGate(QGraphicsItem *parent = nullptr);
+    void setInputCount(int count) override;
 
 protected:
     QPainterPath getPath() const override;

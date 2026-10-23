@@ -2,8 +2,7 @@
 #include <QPainter>
 
 XorGate::XorGate(QGraphicsItem *parent) : Gate(parent) {
-    addInputPin(-29, 11);
-    addInputPin(-29, 41);
+    setInputCount(2);
     setOutputPin(120, 26);
 }
 

@@ -10,7 +10,7 @@
 class Gate : public QGraphicsItem {
 public:
     explicit Gate(QGraphicsItem *parent = nullptr);
-    void setInputCount(int count);
+    virtual void setInputCount(int count);
     int getInputCount() const { return m_inputPins.size(); }
     const QList<Point*>& getInputPins() const { return m_inputPins; }
     Point* getOutputPin() const { return m_outputPin; }

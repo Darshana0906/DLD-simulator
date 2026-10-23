@@ -100,6 +100,22 @@ CircuitReadiness EquationGenerator::checkReadiness(const CircuitAdapter *adapter
                 result.issues.append(QString("Switch %1: Output is open / not connected to any gate.").arg(sTag));
             }
         }
+        // 5. Check GND: Output should be connected to something
+        else if (type == NodeType::INPUT_GND) {
+            const auto &outEdges = dag.getOutgoingEdges(id);
+            if (outEdges.empty()) {
+                result.isReady = false;
+                result.issues.append("GND: Output is open / not connected to anything.");
+            }
+        }
+        // 6. Check Constant 1: Output should be connected to something
+        else if (type == NodeType::INPUT_CONST1) {
+            const auto &outEdges = dag.getOutgoingEdges(id);
+            if (outEdges.empty()) {
+                result.isReady = false;
+                result.issues.append("Constant 1: Output is open / not connected to anything.");
+            }
+        }
     }
 
     if (ledCount == 0) {

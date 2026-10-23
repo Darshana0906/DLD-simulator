@@ -23,6 +23,7 @@ public:
     void setOutput(size_t index, LogicState state);
 
     size_t inputCount() const { return m_inputs.size(); }
+    void setInputCount(size_t count) { m_inputs.resize(count, LogicState::UNDEFINED); }
     size_t outputCount() const { return m_outputs.size(); }
 
 protected:
