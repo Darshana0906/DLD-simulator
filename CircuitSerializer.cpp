@@ -128,9 +128,24 @@ QByteArray CircuitSerializer::serializeToJson(CircuitScene *scene) {
             compObj["state"] = led->getState();
         }
 
+        if (adapter) {
+            QString tag = adapter->getTag(id);
+            if (!tag.isEmpty()) {
+                compObj["tag"] = tag;
+            }
+        }
+
         componentsArray.append(compObj);
     }
     rootObj["components"] = componentsArray;
+
+    if (adapter) {
+        QJsonObject countersObj;
+        countersObj["switchCounter"] = adapter->getSwitchCounter();
+        countersObj["gateCounter"] = adapter->getGateCounter();
+        countersObj["ledCounter"] = adapter->getLedCounter();
+        rootObj["counters"] = countersObj;
+    }
 
     if (adapter) {
         for (QGraphicsItem *item : scene->items()) {
@@ -193,12 +208,20 @@ bool CircuitSerializer::deserializeFromJson(const QByteArray &jsonData, CircuitS
     scene->clearCircuit();
     CircuitAdapter *adapter = scene->getAdapter();
 
+    if (adapter && root.contains("counters")) {
+        QJsonObject countersObj = root.value("counters").toObject();
+        if (countersObj.contains("switchCounter")) adapter->setSwitchCounter(countersObj.value("switchCounter").toInt());
+        if (countersObj.contains("gateCounter")) adapter->setGateCounter(countersObj.value("gateCounter").toInt());
+        if (countersObj.contains("ledCounter")) adapter->setLedCounter(countersObj.value("ledCounter").toInt());
+    }
+
     // Step 2: Instantiate components
     QJsonArray components = root.value("components").toArray();
     for (const QJsonValue &val : components) {
         QJsonObject compObj = val.toObject();
         QString type = compObj.value("type").toString();
         int id = compObj.value("id").toInt(-1);
+        QString tag = compObj.value("tag").toString();
         qreal x = compObj.value("x").toDouble();
         qreal y = compObj.value("y").toDouble();
 
@@ -227,7 +250,7 @@ bool CircuitSerializer::deserializeFromJson(const QByteArray &jsonData, CircuitS
 
         scene->addItem(item);
         if (adapter) {
-            adapter->registerItem(item, id);
+            adapter->registerItem(item, id, tag);
         }
     }
 

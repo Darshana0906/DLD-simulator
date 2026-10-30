@@ -36,7 +36,7 @@ void CircuitAdapter::setScene(CircuitScene *scene) {
 // MEMBER 1: QGraphicsItem* <---> NodeID (int) Mapping
 // =========================================================================
 
-int CircuitAdapter::registerItem(QGraphicsItem *item, int preferredId) {
+int CircuitAdapter::registerItem(QGraphicsItem *item, int preferredId, const QString &preferredTag) {
     if (!item) return -1;
 
     auto it = m_itemToId.find(item);
@@ -90,7 +90,23 @@ int CircuitAdapter::registerItem(QGraphicsItem *item, int preferredId) {
     QPointF tagAnchor;
 
     auto itTag = m_nodeTags.find(id);
-    if (itTag != m_nodeTags.end()) {
+    if (!preferredTag.isEmpty()) {
+        tagText = preferredTag;
+        m_nodeTags[id] = tagText;
+        if (preferredTag.startsWith("S", Qt::CaseInsensitive)) {
+            bool ok = false;
+            int num = preferredTag.mid(1).toInt(&ok);
+            if (ok && num > m_switchCounter) m_switchCounter = num;
+        } else if (preferredTag.startsWith("G", Qt::CaseInsensitive)) {
+            bool ok = false;
+            int num = preferredTag.mid(1).toInt(&ok);
+            if (ok && num > m_gateCounter) m_gateCounter = num;
+        } else if (preferredTag.startsWith("Y", Qt::CaseInsensitive)) {
+            bool ok = false;
+            int num = preferredTag.mid(1).toInt(&ok);
+            if (ok && num > m_ledCounter) m_ledCounter = num;
+        }
+    } else if (itTag != m_nodeTags.end()) {
         tagText = itTag->second;
     } else {
         if (dynamic_cast<Switch*>(item)) {
@@ -141,13 +157,27 @@ QString CircuitAdapter::getTag(int nodeId) const {
 
 void CircuitAdapter::setTag(int nodeId, const QString &tag) {
     m_nodeTags[nodeId] = tag;
+    if (tag.startsWith("S", Qt::CaseInsensitive)) {
+        bool ok = false;
+        int num = tag.mid(1).toInt(&ok);
+        if (ok && num > m_switchCounter) m_switchCounter = num;
+    } else if (tag.startsWith("G", Qt::CaseInsensitive)) {
+        bool ok = false;
+        int num = tag.mid(1).toInt(&ok);
+        if (ok && num > m_gateCounter) m_gateCounter = num;
+    } else if (tag.startsWith("Y", Qt::CaseInsensitive)) {
+        bool ok = false;
+        int num = tag.mid(1).toInt(&ok);
+        if (ok && num > m_ledCounter) m_ledCounter = num;
+    }
+
     auto it = m_idToItem.find(nodeId);
     if (it != m_idToItem.end() && it->second) {
         QGraphicsItem *item = it->second;
         for (QGraphicsItem *child : item->childItems()) {
             if (NodeTagItem *t = dynamic_cast<NodeTagItem*>(child)) {
                 t->setTagText(tag);
-                t->setVisible(true);
+                if (m_scene) t->setVisible(m_scene->showTags());
                 return;
             }
         }
@@ -155,7 +185,7 @@ void CircuitAdapter::setTag(int nodeId, const QString &tag) {
         if (dynamic_cast<Gate*>(item)) tagAnchor = QPointF(20, 0);
         else if (dynamic_cast<LED*>(item)) tagAnchor = QPointF(-5, 25);
         NodeTagItem *tagItem = new NodeTagItem(tag, tagAnchor, item);
-        tagItem->setVisible(true);
+        if (m_scene) tagItem->setVisible(m_scene->showTags());
     }
 }
 
@@ -217,8 +247,37 @@ void CircuitAdapter::unregisterItem(QGraphicsItem *item) {
         m_itemToId.erase(it);
         m_nodeTags.erase(id);
 
+        recalculateCountersFromTags();
+
         emit simulationInvalidated();
     }
+}
+
+void CircuitAdapter::recalculateCountersFromTags() {
+    int maxSwitch = 0;
+    int maxGate = 0;
+    int maxLed = 0;
+
+    for (const auto &pair : m_nodeTags) {
+        const QString &tag = pair.second;
+        if (tag.startsWith("S", Qt::CaseInsensitive)) {
+            bool ok = false;
+            int num = tag.mid(1).toInt(&ok);
+            if (ok && num > maxSwitch) maxSwitch = num;
+        } else if (tag.startsWith("G", Qt::CaseInsensitive)) {
+            bool ok = false;
+            int num = tag.mid(1).toInt(&ok);
+            if (ok && num > maxGate) maxGate = num;
+        } else if (tag.startsWith("Y", Qt::CaseInsensitive)) {
+            bool ok = false;
+            int num = tag.mid(1).toInt(&ok);
+            if (ok && num > maxLed) maxLed = num;
+        }
+    }
+
+    m_switchCounter = maxSwitch;
+    m_gateCounter = maxGate;
+    m_ledCounter = maxLed;
 }
 
 bool CircuitAdapter::hasItem(QGraphicsItem *item) const {
