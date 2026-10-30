@@ -794,7 +794,23 @@ static QString getSuggestedSavePath(const QString &currentPath) {
   }
 }
 
-void MainWindow::saveCircuit() { saveCircuitAs(); }
+void MainWindow::saveCircuit() {
+  if (currentFilePath.isEmpty()) {
+    saveCircuitAs();
+    return;
+  }
+
+  QString errorMsg;
+  if (CircuitSerializer::saveToFile(currentFilePath, scene, &errorMsg)) {
+    updateWindowTitle();
+    statusBar()->showMessage(
+        QString("Saved circuit to %1").arg(QFileInfo(currentFilePath).fileName()),
+        3500);
+  } else {
+    QMessageBox::critical(this, "Error Saving Circuit",
+                          QString("Failed to save circuit:\n%1").arg(errorMsg));
+  }
+}
 
 void MainWindow::saveCircuitAs() {
   QString defaultPath = getSuggestedSavePath(currentFilePath);
