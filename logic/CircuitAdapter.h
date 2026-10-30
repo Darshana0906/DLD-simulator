@@ -35,12 +35,19 @@ public:
     // =========================================================================
     // MEMBER 1: QGraphicsItem* <---> NodeID (int) Mapping
     // =========================================================================
-    int registerItem(QGraphicsItem *item, int preferredId = -1);
+    int registerItem(QGraphicsItem *item, int preferredId = -1, const QString &preferredTag = QString());
     int getNodeId(QGraphicsItem *item) const;
     QGraphicsItem* getItem(int id) const;
     const std::unordered_map<int, QGraphicsItem*>& getItems() const { return m_idToItem; }
     QString getTag(int nodeId) const;
     void setTag(int nodeId, const QString &tag);
+    int getSwitchCounter() const { return m_switchCounter; }
+    void setSwitchCounter(int val) { m_switchCounter = val; }
+    int getGateCounter() const { return m_gateCounter; }
+    void setGateCounter(int val) { m_gateCounter = val; }
+    int getLedCounter() const { return m_ledCounter; }
+    void setLedCounter(int val) { m_ledCounter = val; }
+    void recalculateCountersFromTags();
     void unregisterItem(QGraphicsItem *item);
     bool hasItem(QGraphicsItem *item) const;
     size_t getNodeCount() const { return m_nodes.size(); }
