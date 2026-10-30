@@ -36,6 +36,9 @@ public:
     // Generate logical equations for all outputs in the circuit
     static EquationReport generate(const CircuitAdapter *adapter);
 
+    // Generate immediate step equation for a specific gate (e.g. "G4 = G1 · S2")
+    static QString getImmediateGateEquation(int gateNodeId, const CircuitAdapter *adapter, bool algebraic = true);
+
 private:
     static QString buildExpression(int nodeId, const CircuitAdapter *adapter, bool algebraic,
                                    std::unordered_set<int> &visited, QStringList &errors);

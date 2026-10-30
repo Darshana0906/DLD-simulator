@@ -13,6 +13,8 @@
 class CircuitAdapter;
 class Switch;
 class LED;
+class Gate;
+class QCheckBox;
 
 class TruthTableDialog : public QDialog {
     Q_OBJECT
@@ -39,6 +41,7 @@ private:
     QLabel *m_statsLabel = nullptr;
     QLabel *m_noteLabel = nullptr;
     QLabel *m_tipLabel = nullptr;
+    QCheckBox *m_includeGatesCheck = nullptr;
     QTableWidget *m_tableWidget = nullptr;
     QLabel *m_activeStateLabel = nullptr;
     QPushButton *m_refreshBtn = nullptr;
@@ -47,8 +50,10 @@ private:
     QPushButton *m_closeBtn = nullptr;
 
     QList<Switch*> m_switches;
+    QList<Gate*> m_gates;
     QList<LED*> m_leds;
     QVector<int> m_switchNodeIds;
+    QVector<int> m_gateNodeIds;
     QVector<int> m_ledNodeIds;
 
     int m_totalRows = 0;
