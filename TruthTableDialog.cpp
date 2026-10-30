@@ -1,8 +1,10 @@
 #include "TruthTableDialog.h"
 #include "logic/CircuitAdapter.h"
 #include "logic/Node.h"
+#include "logic/EquationGenerator.h"
 #include "elements/Switch.h"
 #include "elements/LED.h"
+#include "gates/Gate.h"
 
 #include <QGuiApplication>
 #include <QClipboard>
@@ -13,6 +15,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include <QCollator>
+#include <QCheckBox>
 #include <algorithm>
 #include <cmath>
 
@@ -53,10 +56,23 @@ void TruthTableDialog::setupUI() {
     m_noteLabel->setVisible(false);
     mainLayout->addWidget(m_noteLabel);
 
-    // 2. Interactive Tip Label
+    // 2. Interactive Tip Label & Gate Columns Checkbox
+    QHBoxLayout *tipLayout = new QHBoxLayout();
     m_tipLabel = new QLabel("💡 Click any row below to apply its input combination to the circuit.", this);
     m_tipLabel->setStyleSheet("QLabel { color: #475569; font-size: 11px; padding-left: 2px; }");
-    mainLayout->addWidget(m_tipLabel);
+    tipLayout->addWidget(m_tipLabel);
+    tipLayout->addStretch();
+
+    m_includeGatesCheck = new QCheckBox("Include Gate Columns (G#)", this);
+    m_includeGatesCheck->setChecked(true);
+    m_includeGatesCheck->setStyleSheet(
+        "QCheckBox { font-size: 12px; font-weight: 600; color: #4338CA; }"
+        "QCheckBox::indicator { width: 14px; height: 14px; }");
+    m_includeGatesCheck->setToolTip("Show/hide intermediate gate columns with their boolean equations in the table");
+    connect(m_includeGatesCheck, &QCheckBox::toggled, this, [this](bool) { updateTableData(); syncHighlightFromCircuit(); });
+    tipLayout->addWidget(m_includeGatesCheck);
+
+    mainLayout->addLayout(tipLayout);
 
     // 3. Truth Table Widget
     m_tableWidget = new QTableWidget(this);
@@ -188,8 +204,10 @@ void TruthTableDialog::refresh() {
     m_adapter->extractWires();
 
     m_switches.clear();
+    m_gates.clear();
     m_leds.clear();
     m_switchNodeIds.clear();
+    m_gateNodeIds.clear();
     m_ledNodeIds.clear();
 
     const auto &items = m_adapter->getItems();
@@ -200,6 +218,8 @@ void TruthTableDialog::refresh() {
 
         if (Switch *sw = dynamic_cast<Switch*>(item)) {
             m_switches.append(sw);
+        } else if (Gate *g = dynamic_cast<Gate*>(item)) {
+            m_gates.append(g);
         } else if (LED *led = dynamic_cast<LED*>(item)) {
             m_leds.append(led);
         }
@@ -265,6 +285,30 @@ void TruthTableDialog::refresh() {
         return collator.compare(tagA, tagB) < 0;
     });
 
+    // Sort gates in topological order, with tag tie-breaking
+    std::vector<int> topoOrder = m_adapter->getTopologicalOrder();
+    std::unordered_map<int, int> topoRank;
+    for (size_t i = 0; i < topoOrder.size(); ++i) {
+        topoRank[topoOrder[i]] = static_cast<int>(i);
+    }
+
+    std::sort(m_gates.begin(), m_gates.end(), [&collator, &topoRank, this](Gate *a, Gate *b) {
+        int idA = m_adapter->getNodeId(a);
+        int idB = m_adapter->getNodeId(b);
+        auto itA = topoRank.find(idA);
+        auto itB = topoRank.find(idB);
+        int rankA = (itA != topoRank.end()) ? itA->second : 999999;
+        int rankB = (itB != topoRank.end()) ? itB->second : 999999;
+        if (rankA != rankB) {
+            return rankA < rankB;
+        }
+        QString tagA = m_adapter->getTag(idA);
+        QString tagB = m_adapter->getTag(idB);
+        if (tagA.isEmpty()) tagA = QString("G%1").arg(idA);
+        if (tagB.isEmpty()) tagB = QString("G%1").arg(idB);
+        return collator.compare(tagA, tagB) < 0;
+    });
+
     // Sort LEDs deterministically in natural numeric order (Y1, Y2, ..., Y10)
     std::sort(m_leds.begin(), m_leds.end(), [&collator, this](LED *a, LED *b) {
         int idA = m_adapter->getNodeId(a);
@@ -286,6 +330,9 @@ void TruthTableDialog::refresh() {
     for (Switch *sw : m_switches) {
         m_switchNodeIds.append(m_adapter->getNodeId(sw));
     }
+    for (Gate *gate : m_gates) {
+        m_gateNodeIds.append(m_adapter->getNodeId(gate));
+    }
     for (LED *led : m_leds) {
         m_ledNodeIds.append(m_adapter->getNodeId(led));
     }
@@ -293,8 +340,9 @@ void TruthTableDialog::refresh() {
     updateTableData();
 
     // Contextual stats feedback replacing the green banner
-    m_statsLabel->setText(QString("Number of Inputs = %1   |   Number of Outputs = %2   |   Total Rows = %3")
+    m_statsLabel->setText(QString("Number of Inputs = %1   |   Intermediate Gates = %2   |   Number of Outputs = %3   |   Total Rows = %4")
         .arg(m_switches.size())
+        .arg(m_gates.size())
         .arg(m_leds.size())
         .arg(m_totalRows));
     m_statsLabel->setStyleSheet(
@@ -327,11 +375,14 @@ void TruthTableDialog::refresh() {
 
 void TruthTableDialog::updateTableData() {
     int numInputs = m_switches.size();
+    bool includeGates = m_includeGatesCheck ? m_includeGatesCheck->isChecked() : true;
+    int numGates = includeGates ? m_gates.size() : 0;
     int numOutputs = m_leds.size();
+    int totalCols = numInputs + numGates + numOutputs;
     m_totalRows = 1 << numInputs;
 
     m_tableWidget->clear();
-    m_tableWidget->setColumnCount(numInputs + numOutputs);
+    m_tableWidget->setColumnCount(totalCols);
     m_tableWidget->setRowCount(m_totalRows);
 
     QStringList headers;
@@ -339,11 +390,45 @@ void TruthTableDialog::updateTableData() {
         QString tag = m_adapter->getTag(m_switchNodeIds[j]);
         headers << (tag.isEmpty() ? QString("In %1").arg(j + 1) : tag);
     }
+
+    if (includeGates) {
+        for (int g = 0; g < numGates; ++g) {
+            int gateId = m_gateNodeIds[g];
+            QString tag = m_adapter->getTag(gateId);
+            if (tag.isEmpty()) tag = QString("G%1").arg(gateId);
+
+            QString eq = EquationGenerator::getImmediateGateEquation(gateId, m_adapter, true);
+            if (!eq.isEmpty() && eq != "?") {
+                headers << QString("%1 = %2").arg(tag).arg(eq);
+            } else {
+                headers << tag;
+            }
+        }
+    }
+
     for (int k = 0; k < numOutputs; ++k) {
         QString tag = m_adapter->getTag(m_ledNodeIds[k]);
         headers << (tag.isEmpty() ? QString("Out %1").arg(k + 1) : tag);
     }
     m_tableWidget->setHorizontalHeaderLabels(headers);
+
+    // Apply distinctive column header tooltips and styling
+    for (int c = 0; c < totalCols; ++c) {
+        QTableWidgetItem *headerItem = m_tableWidget->horizontalHeaderItem(c);
+        if (!headerItem) continue;
+
+        if (c < numInputs) {
+            headerItem->setToolTip(QString("Input Switch: %1").arg(headerItem->text()));
+        } else if (includeGates && c < numInputs + numGates) {
+            int gIdx = c - numInputs;
+            int gId = m_gateNodeIds[gIdx];
+            QString fullEq = EquationGenerator::getImmediateGateEquation(gId, m_adapter, true);
+            headerItem->setToolTip(QString("Intermediate Gate: %1\nEquation: %1 = %2")
+                                   .arg(m_adapter->getTag(gId)).arg(fullEq));
+        } else {
+            headerItem->setToolTip(QString("Output LED: %1").arg(headerItem->text()));
+        }
+    }
 
     // Backup current switch values so truth-table generation does not alter circuit state
     QVector<bool> originalStates;
@@ -371,7 +456,30 @@ void TruthTableDialog::updateTableData() {
             m_tableWidget->setItem(row, j, item);
         }
 
-        // 4. Read output nodes and populate output column cells
+        // 4. Populate intermediate gate column cells
+        if (includeGates) {
+            for (int g = 0; g < numGates; ++g) {
+                int gateId = m_gateNodeIds[g];
+                Node *node = m_adapter->getNode(gateId);
+                LogicState st = node ? node->getOutput(0) : LogicState::UNDEFINED;
+
+                QString text = (st == LogicState::HIGH) ? "1" : ((st == LogicState::LOW) ? "0" : "?");
+                QTableWidgetItem *item = new QTableWidgetItem(text);
+                item->setTextAlignment(Qt::AlignCenter);
+                item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+
+                if (st == LogicState::HIGH) {
+                    item->setForeground(QColor(79, 70, 229)); // Indigo for Gate HIGH
+                } else if (st == LogicState::LOW) {
+                    item->setForeground(QColor(100, 116, 139)); // Slate Gray for Gate LOW
+                } else {
+                    item->setForeground(QColor(239, 68, 68));   // Red for Undefined
+                }
+                m_tableWidget->setItem(row, numInputs + g, item);
+            }
+        }
+
+        // 5. Read output nodes and populate output column cells
         for (int k = 0; k < numOutputs; ++k) {
             int ledId = m_ledNodeIds[k];
             Node *node = m_adapter->getNode(ledId);
@@ -389,7 +497,7 @@ void TruthTableDialog::updateTableData() {
             } else {
                 item->setForeground(QColor(239, 68, 68));   // Red for Undefined
             }
-            m_tableWidget->setItem(row, numInputs + k, item);
+            m_tableWidget->setItem(row, numInputs + numGates + k, item);
         }
     }
 
@@ -553,8 +661,10 @@ void TruthTableDialog::saveAsPng() {
     }
 
     int numInputs = m_switches.size();
+    bool includeGates = m_includeGatesCheck ? m_includeGatesCheck->isChecked() : true;
+    int numGates = includeGates ? m_gates.size() : 0;
     int numOutputs = m_leds.size();
-    int totalCols = numInputs + numOutputs;
+    int totalCols = m_tableWidget->columnCount();
 
     // Calculate column widths based on text measurements
     QFont titleFont("Segoe UI", 13, QFont::Bold);
@@ -585,10 +695,10 @@ void TruthTableDialog::saveAsPng() {
     const int padding = 20;
     const int titleHeight = 28;
     const int subtitleHeight = 20;
-    const int headerRowHeight = 30;
+    const int headerRowHeight = 32;
     const int dataRowHeight = 26;
 
-    int totalWidth = qMax(520, tableWidth + (padding * 2));
+    int totalWidth = qMax(560, tableWidth + (padding * 2));
     int tableStartX = padding + (totalWidth - (padding * 2) - tableWidth) / 2;
 
     int totalHeight = padding + titleHeight + 6 + subtitleHeight + 14 
@@ -616,8 +726,8 @@ void TruthTableDialog::saveAsPng() {
     // 2. Draw Subtitle / Statistics
     painter.setFont(subFont);
     painter.setPen(QColor("#64748B"));
-    QString statsText = QString("Number of Inputs = %1   |   Number of Outputs = %2   |   Total Rows = %3")
-                            .arg(numInputs).arg(numOutputs).arg(m_totalRows);
+    QString statsText = QString("Number of Inputs = %1   |   Intermediate Gates = %2   |   Number of Outputs = %3   |   Total Rows = %4")
+                            .arg(numInputs).arg(numGates).arg(numOutputs).arg(m_totalRows);
     painter.drawText(QRect(padding, padding + titleHeight + 4, totalWidth - (padding * 2), subtitleHeight),
                      Qt::AlignLeft | Qt::AlignVCenter, statsText);
 
@@ -637,11 +747,16 @@ void TruthTableDialog::saveAsPng() {
     for (int c = 0; c < totalCols; ++c) {
         QRect colHeaderRect(currentX, currentY, colWidths[c], headerRowHeight);
         bool isInput = (c < numInputs);
-        painter.fillRect(colHeaderRect, isInput ? QColor("#EEF2F6") : QColor("#E0E7FF"));
+        bool isGate = (includeGates && c >= numInputs && c < numInputs + numGates);
+
+        QColor headerBg = isInput ? QColor("#EEF2F6") : (isGate ? QColor("#EEF2FF") : QColor("#E0E7FF"));
+        QColor headerTextCol = isInput ? QColor("#1E293B") : (isGate ? QColor("#4338CA") : QColor("#3730A3"));
+
+        painter.fillRect(colHeaderRect, headerBg);
         painter.setPen(QColor("#CBD5E1"));
         painter.drawRect(colHeaderRect);
 
-        painter.setPen(isInput ? QColor("#1E293B") : QColor("#3730A3"));
+        painter.setPen(headerTextCol);
         QString headerText = m_tableWidget->horizontalHeaderItem(c)
             ? m_tableWidget->horizontalHeaderItem(c)->text()
             : "";
@@ -675,12 +790,21 @@ void TruthTableDialog::saveAsPng() {
             if (c < numInputs) {
                 painter.setFont(cellFont);
                 painter.setPen(QColor("#1E293B"));
+            } else if (includeGates && c < numInputs + numGates) {
+                painter.setFont(cellBoldFont);
+                if (text == "1") {
+                    painter.setPen(QColor("#4F46E5")); // Indigo for gate HIGH
+                } else if (text == "0") {
+                    painter.setPen(QColor("#64748B")); // Slate for gate LOW
+                } else {
+                    painter.setPen(QColor("#DC2626"));
+                }
             } else {
                 painter.setFont(cellBoldFont);
                 if (text == "1") {
-                    painter.setPen(QColor("#059669")); // Emerald green
+                    painter.setPen(QColor("#059669")); // Emerald green for output HIGH
                 } else if (text == "0") {
-                    painter.setPen(QColor("#64748B")); // Slate
+                    painter.setPen(QColor("#64748B")); // Slate for output LOW
                 } else {
                     painter.setPen(QColor("#DC2626")); // Red
                 }

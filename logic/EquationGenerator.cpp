@@ -297,3 +297,86 @@ EquationReport EquationGenerator::generate(const CircuitAdapter *adapter) {
 
     return report;
 }
+
+QString EquationGenerator::getImmediateGateEquation(int gateNodeId, const CircuitAdapter *adapter, bool algebraic) {
+    if (!adapter) return QString();
+    GateNode *gate = adapter->getGateNode(gateNodeId);
+    if (!gate) return QString();
+
+    int inCount = static_cast<int>(gate->inputCount());
+    std::vector<QString> pinExprs(inCount, "?");
+
+    const CircuitDAG &dag = adapter->getDAG();
+    const auto &inEdges = dag.getIncomingEdges(gateNodeId);
+
+    for (const Edge &e : inEdges) {
+        if (e.targetPinIdx >= 0 && e.targetPinIdx < inCount) {
+            Node *srcNode = adapter->getNode(e.sourceNodeId);
+            if (!srcNode) continue;
+            NodeType srcType = srcNode->getType();
+            if (srcType == NodeType::INPUT_CONST1) {
+                pinExprs[e.targetPinIdx] = "1";
+            } else if (srcType == NodeType::INPUT_GND) {
+                pinExprs[e.targetPinIdx] = "0";
+            } else {
+                QString srcTag = adapter->getTag(e.sourceNodeId);
+                if (srcTag.isEmpty()) {
+                    if (srcType == NodeType::INPUT_SWITCH) srcTag = QString("S%1").arg(e.sourceNodeId);
+                    else if (dynamic_cast<GateNode*>(srcNode)) srcTag = QString("G%1").arg(e.sourceNodeId);
+                    else srcTag = QString("N%1").arg(e.sourceNodeId);
+                }
+                pinExprs[e.targetPinIdx] = srcTag;
+            }
+        }
+    }
+
+    NodeType type = gate->getType();
+
+    auto wrapIfNeeded = [](const QString &s) -> QString {
+        if (s.isEmpty()) return s;
+        if (!s.contains(' ') && !s.contains('+') && !s.contains(QString::fromUtf8("·")) && !s.contains(QString::fromUtf8("⊕")) && !s.contains(QString::fromUtf8("⊙"))) {
+            return s;
+        }
+        if (s.startsWith('(') && s.endsWith(')')) {
+            return s;
+        }
+        return QString("(%1)").arg(s);
+    };
+
+    if (type == NodeType::GATE_NOT) {
+        QString inner = pinExprs.empty() ? "?" : pinExprs[0];
+        if (algebraic) {
+            if (!inner.contains(' ') && !inner.contains('+') && !inner.contains(QString::fromUtf8("·")) && !inner.contains(QString::fromUtf8("⊕")) && !inner.contains(QString::fromUtf8("⊙"))) {
+                return inner + "'";
+            }
+            return wrapIfNeeded(inner) + "'";
+        } else {
+            return QString("NOT %1").arg(wrapIfNeeded(inner));
+        }
+    }
+
+    QString opSymbol = algebraic ? QString::fromUtf8(" · ") : " AND ";
+    if (type == NodeType::GATE_OR || type == NodeType::GATE_NOR) {
+        opSymbol = algebraic ? " + " : " OR ";
+    } else if (type == NodeType::GATE_XOR) {
+        opSymbol = algebraic ? QString::fromUtf8(" ⊕ ") : " XOR ";
+    } else if (type == NodeType::GATE_XNOR) {
+        opSymbol = algebraic ? QString::fromUtf8(" ⊙ ") : " XNOR ";
+    }
+
+    QString combined;
+    for (size_t i = 0; i < pinExprs.size(); ++i) {
+        if (i > 0) combined += opSymbol;
+        combined += pinExprs[i];
+    }
+
+    if (type == NodeType::GATE_NAND || type == NodeType::GATE_NOR) {
+        if (algebraic) {
+            return QString("(%1)'").arg(combined);
+        } else {
+            return QString("NOT (%1)").arg(combined);
+        }
+    }
+
+    return combined;
+}
