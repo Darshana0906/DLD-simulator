@@ -132,7 +132,7 @@ std::vector<Token> EquationParser::tokenize(const QString &line, int lineOffset,
             tokens.push_back({TokenType::OP_XNOR, QString::fromUtf8("⊙"), tokenStart});
             i++;
         }
-        // Variable names: only 'S' (input switches) and 'Y' (LED output / feedback) variables allowed
+        // Variable names: only 'S' (optionally followed by digits) and 'Y' (optionally followed by digits) allowed
         else if (ch.isLetter()) {
             int start = i;
             while (i < len && (line[i].isLetterOrNumber() || line[i] == '_')) {
@@ -140,8 +140,9 @@ std::vector<Token> EquationParser::tokenize(const QString &line, int lineOffset,
             }
             QString name = line.mid(start, i - start);
 
-            if (!name.startsWith('S', Qt::CaseInsensitive) && !name.startsWith('Y', Qt::CaseInsensitive)) {
-                error = QString("Invalid variable '%1'. Only 'S' (switches, e.g. S1, S2) and 'Y' (LED outputs, e.g. Y1, Y2) are allowed.").arg(name);
+            static const QRegularExpression validVarRegex("^(?:S\\d*|Y\\d*)$", QRegularExpression::CaseInsensitiveOption);
+            if (!validVarRegex.match(name).hasMatch()) {
+                error = QString("Invalid variable '%1'. Only 'S' or 'S' followed by numbers (e.g. S, S1, S2) and 'Y' or 'Y' followed by numbers (e.g. Y, Y1, Y2) are allowed.").arg(name);
                 errorPos = tokenStart;
                 return {};
             }
@@ -380,11 +381,12 @@ ParseResult EquationParser::parse(const QString &input) {
             }
         }
 
-        // Validate output name: must start with 'Y' (corresponds to output element / LED)
+        // Validate output name: must be 'Y' or 'Y' followed by digits (e.g. Y, Y1, Y2)
         if (!outputName.isEmpty()) {
-            if (!outputName.startsWith('Y')) {
+            static const QRegularExpression validOutRegex("^Y\\d*$", QRegularExpression::CaseInsensitiveOption);
+            if (!validOutRegex.match(outputName).hasMatch()) {
                 result.success = false;
-                result.errorMessage = QString("Equation output '%1' must start with 'Y' (e.g. Y1, Y2). 'S' is reserved for input switches.").arg(outputName);
+                result.errorMessage = QString("Equation output '%1' must be 'Y' or 'Y' followed by numbers (e.g. Y, Y1, Y2). 'S' is reserved for input switches.").arg(outputName);
                 result.errorPosition = lineOffset;
                 return result;
             }

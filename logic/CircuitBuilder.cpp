@@ -15,6 +15,8 @@
 #include "../gates/XorGate.h"
 #include "../gates/XnorGate.h"
 #include <algorithm>
+#include <QCollator>
+#include <QRegularExpression>
 
 CircuitBuilder::CircuitBuilder(CircuitScene *scene)
     : m_scene(scene), m_adapter(scene ? scene->getAdapter() : nullptr) {
@@ -379,16 +381,18 @@ BuildResult CircuitBuilder::build(const std::vector<ParsedEquation> &equations) 
     }
 
     // Validate variables:
-    // S variables -> switches
-    // Y variables -> must correspond to a defined equation output
+    // S variables -> switches (S or S followed by numbers)
+    // Y variables -> must correspond to a defined equation output (Y or Y followed by numbers)
     QStringList sVars;
+    static const QRegularExpression sVarRegex("^S\\d*$");
+    static const QRegularExpression yVarRegex("^Y\\d*$");
     for (const QString &var : allVars) {
         QString uVar = var.toUpper();
-        if (uVar.startsWith('S')) {
+        if (sVarRegex.match(uVar).hasMatch()) {
             if (!sVars.contains(uVar)) {
                 sVars.append(uVar);
             }
-        } else if (uVar.startsWith('Y')) {
+        } else if (yVarRegex.match(uVar).hasMatch()) {
             if (!definedOutputs.contains(uVar)) {
                 result.success = false;
                 result.errorMessage = QString("Output variable '%1' is used in an equation, but has no defining equation. Please provide an equation for %1.").arg(uVar);
@@ -396,13 +400,17 @@ BuildResult CircuitBuilder::build(const std::vector<ParsedEquation> &equations) 
             }
         } else {
             result.success = false;
-            result.errorMessage = QString("Invalid variable '%1'. Only 'S' (switches) and 'Y' (LEDs) variables are allowed.").arg(var);
+            result.errorMessage = QString("Invalid variable '%1'. Only 'S' (or S followed by numbers) and 'Y' (or Y followed by numbers) are allowed.").arg(var);
             return result;
         }
     }
 
-    // Sort switch variables naturally
-    std::sort(sVars.begin(), sVars.end());
+    // Sort switch variables naturally (S, S1, S2, ..., S10)
+    QCollator collator;
+    collator.setNumericMode(true);
+    std::sort(sVars.begin(), sVars.end(), [&collator](const QString &a, const QString &b) {
+        return collator.compare(a, b) < 0;
+    });
 
     // Pre-create switches ONLY for S variables (layer 0)
     for (const QString &varName : sVars) {

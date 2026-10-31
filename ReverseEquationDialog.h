@@ -5,7 +5,6 @@
 #include <QLabel>
 #include <QTextEdit>
 #include <QPushButton>
-#include <QCheckBox>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -37,7 +36,6 @@ private:
     QTextEdit *m_inputArea = nullptr;
     QPushButton *m_generateBtn = nullptr;
     QPushButton *m_closeBtn = nullptr;
-    QCheckBox *m_clearCanvasCheck = nullptr;
 
     // Keypad auto-increment buttons
     QPushButton *m_inputBtn = nullptr;   // Starts "S1", increments to "S2", "S3"...

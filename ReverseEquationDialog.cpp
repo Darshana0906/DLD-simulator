@@ -48,6 +48,24 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     QHBoxLayout *row1 = new QHBoxLayout();
     row1->setSpacing(6);
 
+    const QString keypadStyle =
+        "QPushButton { background: #FFFFFF; color: #1E293B; border: 1px solid #CBD5E1; "
+        "  border-radius: 6px; font-weight: bold; font-size: 13px; padding: 4px 12px; }"
+        "QPushButton:hover { background: #EEF2FF; border-color: #818CF8; color: #4338CA; }"
+        "QPushButton:pressed { background: #E0E7FF; border-color: #4F46E5; color: #3730A3; }";
+
+    const QString utilityStyle =
+        "QPushButton { background: #F8FAFC; color: #64748B; border: 1px solid #CBD5E1; "
+        "  border-radius: 6px; font-size: 11px; font-weight: 600; padding: 4px 10px; }"
+        "QPushButton:hover { background: #F1F5F9; color: #1E293B; border-color: #94A3B8; }"
+        "QPushButton:pressed { background: #E2E8F0; }";
+
+    const QString clearStyle =
+        "QPushButton { background: #F8FAFC; color: #64748B; border: 1px solid #CBD5E1; "
+        "  border-radius: 6px; font-size: 11px; font-weight: 600; padding: 4px 10px; }"
+        "QPushButton:hover { background: #FEE2E2; color: #DC2626; border-color: #FCA5A5; }"
+        "QPushButton:pressed { background: #FECDD3; }";
+
     QLabel *varLabel = new QLabel("Variables:", this);
     varLabel->setStyleSheet("font-weight: 600; font-size: 11px; color: #64748B; min-width: 65px;");
     row1->addWidget(varLabel);
@@ -56,10 +74,7 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     m_outputBtn = createKeypadButton(
         "Y1",
         "Click to insert output variable. Automatically increments to Y2, Y3...",
-        "QPushButton { background: #EDE9FE; color: #4338CA; border: 1px solid #A5B4FC; "
-        "  border-radius: 6px; font-weight: bold; font-size: 13px; padding: 4px 14px; }"
-        "QPushButton:hover { background: #DDD6FE; }"
-        "QPushButton:pressed { background: #C4B5FD; }");
+        keypadStyle);
     connect(m_outputBtn, &QPushButton::clicked, this, &ReverseEquationDialog::onOutputVarClicked);
     row1->addWidget(m_outputBtn);
 
@@ -67,10 +82,7 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     QPushButton *eqBtn = createKeypadButton(
         " = ",
         "Insert equals sign (=)",
-        "QPushButton { background: #F1F5F9; color: #1E293B; border: 1px solid #CBD5E1; "
-        "  border-radius: 6px; font-weight: bold; font-size: 14px; padding: 4px 14px; }"
-        "QPushButton:hover { background: #E2E8F0; }"
-        "QPushButton:pressed { background: #CBD5E1; }");
+        keypadStyle);
     connect(eqBtn, &QPushButton::clicked, this, [this]() { insertToken(" = "); });
     row1->addWidget(eqBtn);
 
@@ -78,10 +90,7 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     m_inputBtn = createKeypadButton(
         "S1",
         "Click to insert input switch. Automatically increments to S2, S3...",
-        "QPushButton { background: #ECFDF5; color: #047857; border: 1px solid #6EE7B7; "
-        "  border-radius: 6px; font-weight: bold; font-size: 13px; padding: 4px 14px; }"
-        "QPushButton:hover { background: #D1FAE5; }"
-        "QPushButton:pressed { background: #A7F3D0; }");
+        keypadStyle);
     connect(m_inputBtn, &QPushButton::clicked, this, &ReverseEquationDialog::onInputVarClicked);
     row1->addWidget(m_inputBtn);
 
@@ -89,9 +98,7 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     QPushButton *resetCountBtn = createKeypadButton(
         "↺ Reset S/Y",
         "Reset S counter to S1 and Y counter to Y1",
-        "QPushButton { background: #FFFFFF; color: #64748B; border: 1px dashed #CBD5E1; "
-        "  border-radius: 6px; font-size: 11px; font-weight: 600; padding: 4px 10px; }"
-        "QPushButton:hover { background: #F1F5F9; color: #334155; }");
+        utilityStyle);
     connect(resetCountBtn, &QPushButton::clicked, this, &ReverseEquationDialog::onResetCountersClicked);
     row1->addWidget(resetCountBtn);
 
@@ -106,33 +113,23 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     gateLabel->setStyleSheet("font-weight: 600; font-size: 11px; color: #64748B; min-width: 65px;");
     row2->addWidget(gateLabel);
 
-    QString gateStyle =
-        "QPushButton { background: #EFF6FF; color: #1D4ED8; border: 1px solid #93C5FD; "
-        "  border-radius: 6px; font-weight: bold; font-size: 12px; padding: 4px 12px; }"
-        "QPushButton:hover { background: #DBEAFE; }"
-        "QPushButton:pressed { background: #BFDBFE; }";
-
-    QPushButton *andBtn = createKeypadButton("AND  ·", "Insert AND operator (·)", gateStyle);
+    QPushButton *andBtn = createKeypadButton("AND  ·", "Insert AND operator (·)", keypadStyle);
     connect(andBtn, &QPushButton::clicked, this, [this]() { insertToken(" · "); });
     row2->addWidget(andBtn);
 
-    QPushButton *orBtn = createKeypadButton("OR  +", "Insert OR operator (+)", gateStyle);
+    QPushButton *orBtn = createKeypadButton("OR  +", "Insert OR operator (+)", keypadStyle);
     connect(orBtn, &QPushButton::clicked, this, [this]() { insertToken(" + "); });
     row2->addWidget(orBtn);
 
-    QPushButton *notBtn = createKeypadButton("NOT  '", "Insert NOT complement (')",
-        "QPushButton { background: #FFF1F2; color: #BE123C; border: 1px solid #FDA4AF; "
-        "  border-radius: 6px; font-weight: bold; font-size: 13px; padding: 4px 12px; }"
-        "QPushButton:hover { background: #FFE4E6; }"
-        "QPushButton:pressed { background: #FECDD3; }");
+    QPushButton *notBtn = createKeypadButton("NOT  '", "Insert NOT complement (')", keypadStyle);
     connect(notBtn, &QPushButton::clicked, this, [this]() { insertToken("'"); });
     row2->addWidget(notBtn);
 
-    QPushButton *xorBtn = createKeypadButton("XOR  ⊕", "Insert XOR operator (⊕)", gateStyle);
+    QPushButton *xorBtn = createKeypadButton("XOR  ⊕", "Insert XOR operator (⊕)", keypadStyle);
     connect(xorBtn, &QPushButton::clicked, this, [this]() { insertToken(" ⊕ "); });
     row2->addWidget(xorBtn);
 
-    QPushButton *xnorBtn = createKeypadButton("XNOR  ⊙", "Insert XNOR operator (⊙)", gateStyle);
+    QPushButton *xnorBtn = createKeypadButton("XNOR  ⊙", "Insert XNOR operator (⊙)", keypadStyle);
     connect(xnorBtn, &QPushButton::clicked, this, [this]() { insertToken(" ⊙ "); });
     row2->addWidget(xnorBtn);
 
@@ -147,24 +144,17 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     groupLabel->setStyleSheet("font-weight: 600; font-size: 11px; color: #64748B; min-width: 65px;");
     row3->addWidget(groupLabel);
 
-    QString parenStyle =
-        "QPushButton { background: #F8FAFC; color: #334155; border: 1px solid #CBD5E1; "
-        "  border-radius: 6px; font-weight: bold; font-size: 13px; padding: 4px 14px; }"
-        "QPushButton:hover { background: #E2E8F0; }";
-
-    QPushButton *lParenBtn = createKeypadButton(" ( ", "Insert left parenthesis", parenStyle);
+    QPushButton *lParenBtn = createKeypadButton(" ( ", "Insert left parenthesis", keypadStyle);
     connect(lParenBtn, &QPushButton::clicked, this, [this]() { insertToken("("); });
     row3->addWidget(lParenBtn);
 
-    QPushButton *rParenBtn = createKeypadButton(" ) ", "Insert right parenthesis", parenStyle);
+    QPushButton *rParenBtn = createKeypadButton(" ) ", "Insert right parenthesis", keypadStyle);
     connect(rParenBtn, &QPushButton::clicked, this, [this]() { insertToken(")"); });
     row3->addWidget(rParenBtn);
 
     QPushButton *clearAllBtn = createKeypadButton(
         "🗑 Clear", "Clear entire equation editor and reset counters",
-        "QPushButton { background: #FFFFFF; color: #EF4444; border: 1px solid #FCA5A5; "
-        "  border-radius: 6px; font-weight: bold; font-size: 11px; padding: 4px 12px; }"
-        "QPushButton:hover { background: #FEF2F2; }");
+        clearStyle);
     connect(clearAllBtn, &QPushButton::clicked, this, &ReverseEquationDialog::onClearAllClicked);
     row3->addWidget(clearAllBtn);
 
@@ -200,12 +190,6 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     m_inputArea->setAcceptRichText(false);
     mainLayout->addWidget(m_inputArea, 1);
 
-    // Clear canvas checkbox
-    m_clearCanvasCheck = new QCheckBox("Clear existing canvas before generating", this);
-    m_clearCanvasCheck->setChecked(true);
-    m_clearCanvasCheck->setStyleSheet("QCheckBox { font-size: 12px; color: #475569; padding: 2px 0; }");
-    mainLayout->addWidget(m_clearCanvasCheck);
-
     // Bottom Action Buttons
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->setSpacing(8);
@@ -213,11 +197,11 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     m_generateBtn = new QPushButton("▶ Generate Circuit on Canvas", this);
     m_generateBtn->setToolTip("Parse equation and place circuit components on canvas");
     m_generateBtn->setStyleSheet(
-        "QPushButton { padding: 9px 22px; font-weight: 700; font-size: 14px; "
-        "  border-radius: 6px; border: 1px solid #15803D; "
-        "  background: #16A34A; color: white; }"
-        "QPushButton:hover { background: #15803D; }"
-        "QPushButton:pressed { background: #166534; }");
+        "QPushButton { padding: 9px 22px; font-weight: 700; font-size: 13px; "
+        "  border-radius: 6px; border: 1px solid #4338CA; "
+        "  background: #4F46E5; color: white; }"
+        "QPushButton:hover { background: #4338CA; }"
+        "QPushButton:pressed { background: #3730A3; }");
     connect(m_generateBtn, &QPushButton::clicked, this, &ReverseEquationDialog::onGenerateClicked);
     btnLayout->addWidget(m_generateBtn);
 
@@ -228,7 +212,7 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
         "QPushButton { padding: 8px 18px; font-weight: 600; font-size: 13px; "
         "  border-radius: 6px; border: 1px solid #CBD5E1; "
         "  background: #FFFFFF; color: #334155; }"
-        "QPushButton:hover { background: #F1F5F9; }");
+        "QPushButton:hover { background: #F1F5F9; border-color: #94A3B8; }");
     connect(m_closeBtn, &QPushButton::clicked, this, &QDialog::accept);
     btnLayout->addWidget(m_closeBtn);
 
@@ -284,8 +268,8 @@ void ReverseEquationDialog::onGenerateClicked() {
         return;
     }
 
-    // Step 2: Optionally clear the canvas
-    if (m_clearCanvasCheck->isChecked()) {
+    // Step 2: Clear existing canvas before generating by default
+    if (m_scene) {
         m_scene->clearCircuit();
     }
 
