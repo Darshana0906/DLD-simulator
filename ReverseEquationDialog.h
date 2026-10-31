@@ -27,7 +27,6 @@ private slots:
     void onOutputVarClicked();
     void onResetCountersClicked();
     void onClearAllClicked();
-    void onBackspaceClicked();
 
 private:
     void insertToken(const QString &text);
