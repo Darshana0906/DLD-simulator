@@ -139,7 +139,7 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
     row2->addStretch();
     keypadLayout->addLayout(row2);
 
-    // --- Row 3: Grouping & Editing ---
+    // --- Row 3: Grouping & Clear ---
     QHBoxLayout *row3 = new QHBoxLayout();
     row3->setSpacing(6);
 
@@ -149,45 +149,21 @@ ReverseEquationDialog::ReverseEquationDialog(CircuitScene *scene, QWidget *paren
 
     QString parenStyle =
         "QPushButton { background: #F8FAFC; color: #334155; border: 1px solid #CBD5E1; "
-        "  border-radius: 6px; font-weight: bold; font-size: 13px; padding: 4px 10px; }"
+        "  border-radius: 6px; font-weight: bold; font-size: 13px; padding: 4px 14px; }"
         "QPushButton:hover { background: #E2E8F0; }";
 
-    QPushButton *lParenBtn = createKeypadButton(" ( ", "Left parenthesis", parenStyle);
+    QPushButton *lParenBtn = createKeypadButton(" ( ", "Insert left parenthesis", parenStyle);
     connect(lParenBtn, &QPushButton::clicked, this, [this]() { insertToken("("); });
     row3->addWidget(lParenBtn);
 
-    QPushButton *rParenBtn = createKeypadButton(" ) ", "Right parenthesis", parenStyle);
+    QPushButton *rParenBtn = createKeypadButton(" ) ", "Insert right parenthesis", parenStyle);
     connect(rParenBtn, &QPushButton::clicked, this, [this]() { insertToken(")"); });
     row3->addWidget(rParenBtn);
-
-    QPushButton *nandTipBtn = createKeypadButton(
-        "( · )'", "NAND template: (A · B)' produces a NAND gate",
-        "QPushButton { background: #FEF3C7; color: #B45309; border: 1px solid #FCD34D; "
-        "  border-radius: 6px; font-weight: bold; font-size: 11px; padding: 4px 8px; }"
-        "QPushButton:hover { background: #FDE68A; }");
-    connect(nandTipBtn, &QPushButton::clicked, this, [this]() { insertToken("()' "); });
-    row3->addWidget(nandTipBtn);
-
-    QPushButton *spaceBtn = createKeypadButton("␣ Space", "Insert space", parenStyle);
-    connect(spaceBtn, &QPushButton::clicked, this, [this]() { insertToken(" "); });
-    row3->addWidget(spaceBtn);
-
-    QPushButton *newLineBtn = createKeypadButton("↵ New Line", "New line for another output (e.g. Y2)", parenStyle);
-    connect(newLineBtn, &QPushButton::clicked, this, [this]() { insertToken("\n"); });
-    row3->addWidget(newLineBtn);
-
-    QPushButton *backspaceBtn = createKeypadButton(
-        "⌫ Backspace", "Delete character before cursor",
-        "QPushButton { background: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; "
-        "  border-radius: 6px; font-weight: bold; font-size: 11px; padding: 4px 8px; }"
-        "QPushButton:hover { background: #FECACA; }");
-    connect(backspaceBtn, &QPushButton::clicked, this, &ReverseEquationDialog::onBackspaceClicked);
-    row3->addWidget(backspaceBtn);
 
     QPushButton *clearAllBtn = createKeypadButton(
         "🗑 Clear", "Clear entire equation editor and reset counters",
         "QPushButton { background: #FFFFFF; color: #EF4444; border: 1px solid #FCA5A5; "
-        "  border-radius: 6px; font-weight: bold; font-size: 11px; padding: 4px 8px; }"
+        "  border-radius: 6px; font-weight: bold; font-size: 11px; padding: 4px 12px; }"
         "QPushButton:hover { background: #FEF2F2; }");
     connect(clearAllBtn, &QPushButton::clicked, this, &ReverseEquationDialog::onClearAllClicked);
     row3->addWidget(clearAllBtn);
@@ -291,11 +267,6 @@ void ReverseEquationDialog::onResetCountersClicked() {
 void ReverseEquationDialog::onClearAllClicked() {
     m_inputArea->clear();
     onResetCountersClicked();
-    m_inputArea->setFocus();
-}
-
-void ReverseEquationDialog::onBackspaceClicked() {
-    m_inputArea->textCursor().deletePreviousChar();
     m_inputArea->setFocus();
 }
 
