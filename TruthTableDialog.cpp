@@ -58,7 +58,7 @@ void TruthTableDialog::setupUI() {
 
     // 2. Interactive Tip Label & Gate Columns Checkbox
     QHBoxLayout *tipLayout = new QHBoxLayout();
-    m_tipLabel = new QLabel("💡 Click any row below to apply its input combination to the circuit.", this);
+    m_tipLabel = new QLabel("Click any row below to apply its input combination to the circuit.", this);
     m_tipLabel->setStyleSheet("QLabel { color: #475569; font-size: 11px; padding-left: 2px; }");
     tipLayout->addWidget(m_tipLabel);
     tipLayout->addStretch();
@@ -119,7 +119,7 @@ void TruthTableDialog::setupUI() {
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->setSpacing(8);
 
-    m_refreshBtn = new QPushButton("🔄 Refresh", this);
+    m_refreshBtn = new QPushButton("Refresh", this);
     m_refreshBtn->setToolTip("Re-scan circuit components and re-generate truth table");
     m_refreshBtn->setStyleSheet(
         "QPushButton { padding: 6px 14px; font-weight: 600; border-radius: 4px; border: 1px solid #CBD5E1; background: #FFFFFF; }"
@@ -127,7 +127,7 @@ void TruthTableDialog::setupUI() {
     connect(m_refreshBtn, &QPushButton::clicked, this, &TruthTableDialog::refresh);
     btnLayout->addWidget(m_refreshBtn);
 
-    m_copyBtn = new QPushButton("📋 Copy Table", this);
+    m_copyBtn = new QPushButton("Copy Table", this);
     m_copyBtn->setToolTip("Copy truth table to clipboard in Markdown table format");
     m_copyBtn->setStyleSheet(
         "QPushButton { padding: 6px 14px; font-weight: 600; border-radius: 4px; border: 1px solid #4338CA; background: #4F46E5; color: white; }"
@@ -136,7 +136,7 @@ void TruthTableDialog::setupUI() {
     connect(m_copyBtn, &QPushButton::clicked, this, &TruthTableDialog::copyToClipboard);
     btnLayout->addWidget(m_copyBtn);
 
-    m_savePngBtn = new QPushButton("🖼️ Save as PNG", this);
+    m_savePngBtn = new QPushButton("Save as PNG", this);
     m_savePngBtn->setToolTip("Export the full truth table as a PNG image file");
     m_savePngBtn->setStyleSheet(
         "QPushButton { padding: 6px 14px; font-weight: 600; border-radius: 4px; border: 1px solid #0284C7; background: #0EA5E9; color: white; }"
@@ -182,8 +182,8 @@ void TruthTableDialog::setupConnections() {
 }
 
 void TruthTableDialog::refresh() {
-    m_copyBtn->setText("📋 Copy Table");
-    m_savePngBtn->setText("🖼️ Save as PNG");
+    m_copyBtn->setText("Copy Table");
+    m_savePngBtn->setText("Save as PNG");
 
     if (!m_adapter) {
         m_statsLabel->setText("Error: Circuit adapter not connected.");
@@ -827,7 +827,7 @@ void TruthTableDialog::saveAsPng() {
     if (image.save(filePath, "PNG")) {
         m_savePngBtn->setText("✓ Saved PNG!");
         QTimer::singleShot(2500, this, [this]() {
-            m_savePngBtn->setText("🖼️ Save as PNG");
+            m_savePngBtn->setText("Save as PNG");
         });
     } else {
         QMessageBox::critical(this, "Save Failed", QString("Could not write image to %1").arg(filePath));
