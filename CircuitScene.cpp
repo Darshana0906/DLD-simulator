@@ -195,7 +195,9 @@ void CircuitScene::onPointClicked(Point *point) {
 
         // Rule 3: An input pin can only receive one driving wire
         Point *inputPin = startIsOutput ? point : start;
-        if (!inputPin->getWires().isEmpty()) {
+        QList<Wire*> existingWires = inputPin->getWires();
+        existingWires.removeAll(m_draftWire); // Ignore the temporary draft wire!
+        if (!existingWires.isEmpty()) {
             clearWirePlacement();
             emit errorMessage("This input pin already has a wire connected to it!");
             emit placementCancelled();
@@ -204,8 +206,8 @@ void CircuitScene::onPointClicked(Point *point) {
 
         clearWirePlacement(); // Clears draft wire and resets start pin state
 
-        // Create permanent Manhattan Wire between start pin and target pin
-        Wire *wire = new Wire(start, point);
+        // Normalize visual wire endpoints: startPoint = Output, endPoint = Input
+        Wire *wire = startIsOutput ? new Wire(start, point) : new Wire(point, start);
         addItem(wire);
 
         if (!canPlaceWire(wire)) {
