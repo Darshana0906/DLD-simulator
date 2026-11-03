@@ -43,11 +43,6 @@ void Input::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 }
 
 void Input::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  CircuitScene *cs = dynamic_cast<CircuitScene *>(scene());
-  if (cs && cs->isPlacementMode()) {
-    event->ignore();
-    return;
-  }
   QGraphicsItem::mousePressEvent(event);
 }
 

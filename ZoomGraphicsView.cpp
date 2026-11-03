@@ -58,12 +58,7 @@ void ZoomGraphicsView::applyCursor()
             }
         }
 
-        if (m_circuitScene && (m_circuitScene->isPlacementMode() || m_circuitScene->isWireToolActive())) {
-            viewport()->setCursor(Qt::CrossCursor);
-            return;
-        }
-
-        // If an item has grabbed the mouse (e.g. dragging a resize handle),
+        // If an item has grabbed the mouse (e.g. dragging a resize handle or moving a component),
         // maintain its cursor during the drag gesture.
         if (m_circuitScene && m_circuitScene->mouseGrabberItem()) {
             QGraphicsItem *grabber = m_circuitScene->mouseGrabberItem();
@@ -72,6 +67,25 @@ void ZoomGraphicsView::applyCursor()
                 return;
             }
             viewport()->setCursor(Qt::ArrowCursor);
+            return;
+        }
+
+        if (m_circuitScene && m_circuitScene->isWireToolActive()) {
+            viewport()->setCursor(Qt::CrossCursor);
+            return;
+        }
+
+        if (m_circuitScene && m_circuitScene->isPlacementMode()) {
+            QGraphicsItem *hitItem = m_circuitScene->itemAt(scenePos, QTransform());
+            if (hitItem) {
+                if (hitItem->hasCursor()) {
+                    viewport()->setCursor(hitItem->cursor());
+                    return;
+                }
+                viewport()->setCursor(Qt::ArrowCursor);
+                return;
+            }
+            viewport()->setCursor(Qt::CrossCursor);
             return;
         }
 
