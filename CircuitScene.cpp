@@ -133,12 +133,38 @@ void CircuitScene::onPointClicked(Point *point) {
     if (!point) return;
 
     if (m_wireStartPoint == nullptr) {
+        // Determine whether this pin is input or output
+        bool isOutput = (point->getPinType() == PinType::Output);
+        if (m_adapter) {
+            int id = -1, pinIdx = 0;
+            bool ok = m_adapter->getPinInfo(point, id, isOutput, pinIdx);
+            if (!ok) isOutput = (point->getPinType() == PinType::Output);
+        } else {
+            isOutput = (point->getPinType() == PinType::Output);
+        }
+
+        // Rule: An input pin can only receive one driving wire.
+        // If this input pin already has a wire connected, warn immediately.
+        // (Output pins such as Switch / Gate Output can connect to multiple inputs!)
+        if (!isOutput) {
+            QList<Wire*> existingWires = point->getWires();
+            existingWires.removeAll(m_draftWire);
+            if (!existingWires.isEmpty()) {
+                emit errorMessage("This input pin already has a wire connected to it!");
+                return;
+            }
+        }
+
         // Step 1: Select start pin for wire connection
         m_wireStartPoint = point;
         m_wireStartPoint->setSelectedForWire(true);
 
         m_draftWire = new Wire(m_wireStartPoint);
         addItem(m_draftWire);
+    } else if (m_wireStartPoint == point) {
+        // Clicking the same pin again cancels wire placement cleanly
+        clearWirePlacement();
+        return;
     } else if (m_wireStartPoint != point) {
         // Step 2: Connect to target pin
         Point *start = m_wireStartPoint;
@@ -386,7 +412,7 @@ void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     }
 
     // ── Wire tool ────────────────────────────────────────────────────────────
-    if (m_wireToolActive) {
+    if (m_wireToolActive && !m_wireStartPoint) {
         if (event->button() == Qt::LeftButton) {
             Point *pin = findPinNear(event->scenePos(), 25.0);
             if (pin) {
@@ -397,9 +423,45 @@ void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
         }
     }
 
+    // ── Wire in progress (started by clicking a pin, in ANY mode) ───────────
+    // When a wire start point has been set (either via the wire tool or by
+    // clicking a pin directly), all left-clicks are handled as wire-completion
+    // attempts.  Clicking on empty space (no pin nearby) cancels the draft.
+    if (m_wireStartPoint) {
+        if (event->button() == Qt::LeftButton) {
+            Point *pin = findPinNear(event->scenePos(), 25.0);
+            if (pin) {
+                // Complete the wire connection to this pin
+                onPointClicked(pin);
+            } else {
+                // Clicked away from any pin → cancel the draft wire
+                clearWirePlacement();
+            }
+            event->accept();
+            return;
+        }
+    }
+
     // ── Placement mode ───────────────────────────────────────────────────────
     if (m_placementMode) {
         if (event->button() == Qt::LeftButton) {
+            // If the click landed on or near a pin, start/complete wire drawing
+            // instead of placing a component.
+            Point *pin = findPinNear(event->scenePos(), 25.0);
+            if (pin) {
+                bool onSwitchToggle = false;
+                if (Switch *sw = dynamic_cast<Switch*>(pin->parentItem())) {
+                    QPointF local = sw->mapFromScene(event->scenePos());
+                    if (QRectF(10, 10, 30, 30).contains(local)) {
+                        onSwitchToggle = true;
+                    }
+                }
+                if (!onSwitchToggle) {
+                    onPointClicked(pin);
+                    event->accept();
+                    return;
+                }
+            }
             emit sceneClicked(event->scenePos());
             event->accept();
             return;
@@ -408,6 +470,23 @@ void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
 
     // ── Normal (select / move) mode ──────────────────────────────────────────
     if (event->button() == Qt::LeftButton) {
+        // If user clicks on or near a pin in normal mode, start/complete wire drawing!
+        Point *pin = findPinNear(event->scenePos(), 25.0);
+        if (pin) {
+            bool onSwitchToggle = false;
+            if (Switch *sw = dynamic_cast<Switch*>(pin->parentItem())) {
+                QPointF local = sw->mapFromScene(event->scenePos());
+                if (QRectF(10, 10, 30, 30).contains(local)) {
+                    onSwitchToggle = true;
+                }
+            }
+            if (!onSwitchToggle) {
+                onPointClicked(pin);
+                event->accept();
+                return;
+            }
+        }
+
         QGraphicsItem *hit = itemAt(event->scenePos(), QTransform());
 
         // If the user clicked on the group selection box, let it handle group dragging
@@ -494,7 +573,7 @@ void CircuitScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 
 void CircuitScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     QGraphicsScene::mouseReleaseEvent(event);
-    if (event->button() == Qt::LeftButton && !m_placementMode && !m_wireToolActive) {
+    if (event->button() == Qt::LeftButton && !m_placementMode && !m_wireToolActive && !m_wireStartPoint) {
         emit circuitModified();
     }
 }

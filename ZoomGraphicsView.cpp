@@ -1,6 +1,7 @@
 #include "ZoomGraphicsView.h"
 #include "CircuitScene.h"
 #include "elements/Switch.h"
+#include "elements/Point.h"
 #include <QGraphicsItem>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -37,9 +38,31 @@ void ZoomGraphicsView::applyCursor()
         viewport()->setCursor(Qt::ClosedHandCursor);
     } else if (m_spacePressed) {
         viewport()->setCursor(Qt::OpenHandCursor);
-    } else if (m_circuitScene && (m_circuitScene->isPlacementMode() || m_circuitScene->isWireToolActive())) {
-        viewport()->setCursor(Qt::CrossCursor);
     } else {
+        // If mouse is near any pin, show pointing-hand cursor immediately so the user
+        // knows they can click to start or complete wire drawing.
+        QPoint localPos = viewport()->mapFromGlobal(QCursor::pos());
+        QPointF scenePos = mapToScene(localPos);
+        Point *pinNear = m_circuitScene ? m_circuitScene->findPinNear(scenePos, 25.0) : nullptr;
+        if (pinNear) {
+            bool onSwitchToggle = false;
+            if (Switch *sw = dynamic_cast<Switch*>(pinNear->parentItem())) {
+                QPointF local = sw->mapFromScene(scenePos);
+                if (QRectF(10, 10, 30, 30).contains(local)) {
+                    onSwitchToggle = true;
+                }
+            }
+            if (!onSwitchToggle) {
+                viewport()->setCursor(Qt::PointingHandCursor);
+                return;
+            }
+        }
+
+        if (m_circuitScene && (m_circuitScene->isPlacementMode() || m_circuitScene->isWireToolActive())) {
+            viewport()->setCursor(Qt::CrossCursor);
+            return;
+        }
+
         // If an item has grabbed the mouse (e.g. dragging a resize handle),
         // maintain its cursor during the drag gesture.
         if (m_circuitScene && m_circuitScene->mouseGrabberItem()) {
@@ -52,7 +75,6 @@ void ZoomGraphicsView::applyCursor()
             return;
         }
 
-        QPoint localPos = viewport()->mapFromGlobal(QCursor::pos());
         const QList<QGraphicsItem *> itemList = items(localPos);
         QGraphicsItem *cursorItem = nullptr;
         for (QGraphicsItem *item : itemList) {
@@ -168,8 +190,10 @@ void ZoomGraphicsView::mousePressEvent(QMouseEvent *event)
     // ── Left-click ────────────────────────────────────────────────────────────
     if (event->button() == Qt::LeftButton) {
         bool inPlacement = m_circuitScene && (m_circuitScene->isPlacementMode() || m_circuitScene->isWireToolActive());
+        bool nearPin = m_circuitScene && (m_circuitScene->findPinNear(mapToScene(event->pos()), 25.0) != nullptr);
+        bool wireInProgress = m_circuitScene && m_circuitScene->isWireInProgress();
 
-        if (inPlacement) {
+        if (inPlacement || nearPin || wireInProgress) {
             setDragMode(QGraphicsView::NoDrag);
             QGraphicsView::mousePressEvent(event);
             applyCursor();

@@ -12,6 +12,7 @@ Point::Point(QGraphicsItem *parent, bool movable, PinType type)
         setFlag(QGraphicsItem::ItemIsSelectable);
     setAcceptHoverEvents(true);
     setZValue(100); // Pins render above gates
+    setCursor(Qt::PointingHandCursor);
 }
 
 Point::~Point() {
@@ -103,8 +104,11 @@ void Point::hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
 
 void Point::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     CircuitScene *cs = dynamic_cast<CircuitScene *>(scene());
-    if (cs && cs->isPlacementMode()) {
-        // Notify scene of pin selection
+    // Always handle left-clicks on pins: whether in placement mode, wire tool
+    // mode, or normal mode.  Clicking any pin starts (or completes) wire
+    // drawing, giving users a natural "click pin to wire" workflow without
+    // needing to select the wire tool from the toolbar first.
+    if (cs && event->button() == Qt::LeftButton) {
         cs->onPointClicked(this);
         event->accept();
         return;

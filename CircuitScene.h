@@ -24,6 +24,7 @@ public:
 
   void setWireToolActive(bool active);
   bool isWireToolActive() const { return m_wireToolActive; }
+  bool isWireInProgress() const { return m_wireStartPoint != nullptr; }
 
   void setShowTags(bool show);
   bool showTags() const { return m_showTags; }
