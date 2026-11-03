@@ -33,7 +33,7 @@ EquationDialog::EquationDialog(CircuitAdapter *adapter, QWidget *parent)
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->setSpacing(8);
 
-    m_refreshBtn = new QPushButton("🔄 Refresh", this);
+    m_refreshBtn = new QPushButton("Refresh", this);
     m_refreshBtn->setToolTip("Re-check circuit readiness and re-calculate equations");
     m_refreshBtn->setStyleSheet(
         "QPushButton { padding: 6px 14px; font-weight: 600; border-radius: 4px; border: 1px solid #CBD5E1; background: #FFFFFF; }"
@@ -41,7 +41,7 @@ EquationDialog::EquationDialog(CircuitAdapter *adapter, QWidget *parent)
     connect(m_refreshBtn, &QPushButton::clicked, this, &EquationDialog::refresh);
     btnLayout->addWidget(m_refreshBtn);
 
-    m_copyBtn = new QPushButton("📋 Copy Equation", this);
+    m_copyBtn = new QPushButton("Copy Equation", this);
     m_copyBtn->setToolTip("Copy generated Boolean equation to clipboard");
     m_copyBtn->setStyleSheet(
         "QPushButton { padding: 6px 14px; font-weight: 600; border-radius: 4px; border: 1px solid #4338CA; background: #4F46E5; color: white; }"
@@ -50,7 +50,7 @@ EquationDialog::EquationDialog(CircuitAdapter *adapter, QWidget *parent)
     connect(m_copyBtn, &QPushButton::clicked, this, [this]() {
         if (!m_lastCopiedText.isEmpty()) {
             QGuiApplication::clipboard()->setText(m_lastCopiedText);
-            m_copyBtn->setText("✓ Copied!");
+            m_copyBtn->setText("Copied!");
         }
     });
     btnLayout->addWidget(m_copyBtn);
@@ -70,7 +70,7 @@ EquationDialog::EquationDialog(CircuitAdapter *adapter, QWidget *parent)
 }
 
 void EquationDialog::refresh() {
-    m_copyBtn->setText("📋 Copy Equation");
+    m_copyBtn->setText("Copy Equation");
     if (!m_adapter) {
         m_contentArea->setHtml("<p style='color:#64748B;'>No circuit data available.</p>");
         m_copyBtn->setEnabled(false);
@@ -125,4 +125,3 @@ void EquationDialog::updateUI(const EquationReport &report) {
     m_copyBtn->setEnabled(!plainTextCopy.isEmpty());
     m_lastCopiedText = plainTextCopy;
 }
-

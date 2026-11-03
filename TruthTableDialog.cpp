@@ -636,7 +636,7 @@ void TruthTableDialog::copyToClipboard() {
     }
 
     QGuiApplication::clipboard()->setText(lines.join("\n"));
-    m_copyBtn->setText("✓ Copied!");
+    m_copyBtn->setText("Copied!");
 }
 
 void TruthTableDialog::saveAsPng() {
@@ -833,4 +833,3 @@ void TruthTableDialog::saveAsPng() {
         QMessageBox::critical(this, "Save Failed", QString("Could not write image to %1").arg(filePath));
     }
 }
-
