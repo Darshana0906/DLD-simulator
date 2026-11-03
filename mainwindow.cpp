@@ -122,17 +122,19 @@ MainWindow::MainWindow(QWidget *parent)
   });
   addAction(escapeAction);
 
-  QToolBar *toolbar = new QToolBar("Toolbar", this);
-  addToolBar(Qt::LeftToolBarArea, toolbar);
-  toolbar->setIconSize(QSize(96, 64));
+  // Left Toolbar: Gates & Connections
+  QToolBar *leftToolbar = new QToolBar("Gates & Connections", this);
+  leftToolbar->setObjectName("LeftToolBar");
+  addToolBar(Qt::LeftToolBarArea, leftToolbar);
+  leftToolbar->setIconSize(QSize(96, 64));
 
   // gates
   QFont font;
   font.setPointSize(12);
 
   QLabel *gatelabel = new QLabel("GATES");
-  gatelabel->setAlignment(Qt ::AlignCenter);
-  toolbar->addWidget(gatelabel);
+  gatelabel->setAlignment(Qt::AlignCenter);
+  leftToolbar->addWidget(gatelabel);
   gatelabel->setFont(font);
   gatelabel->setStyleSheet("background-color: lightgray;");
 
@@ -142,7 +144,7 @@ MainWindow::MainWindow(QWidget *parent)
   andButton->setDefaultAction(andAction);
   andButton->setToolTip("AND Gate");
   andButton->setFixedSize(96, 64);
-  toolbar->addWidget(andButton);
+  leftToolbar->addWidget(andButton);
 
   QAction *orAction = new QAction(this);
   orAction->setIcon(QIcon(":/icons/ORgate.png"));
@@ -150,7 +152,7 @@ MainWindow::MainWindow(QWidget *parent)
   orButton->setDefaultAction(orAction);
   orButton->setToolTip("OR Gate");
   orButton->setFixedSize(96, 64);
-  toolbar->addWidget(orButton);
+  leftToolbar->addWidget(orButton);
 
   QAction *notAction = new QAction(this);
   notAction->setIcon(QIcon(":/icons/NOTgate.png"));
@@ -158,7 +160,7 @@ MainWindow::MainWindow(QWidget *parent)
   notButton->setDefaultAction(notAction);
   notButton->setToolTip("NOT Gate");
   notButton->setFixedSize(96, 64);
-  toolbar->addWidget(notButton);
+  leftToolbar->addWidget(notButton);
 
   QAction *nandAction = new QAction(this);
   nandAction->setIcon(QIcon(":/icons/NANDgate.png"));
@@ -166,7 +168,7 @@ MainWindow::MainWindow(QWidget *parent)
   nandButton->setDefaultAction(nandAction);
   nandButton->setToolTip("NAND Gate");
   nandButton->setFixedSize(96, 64);
-  toolbar->addWidget(nandButton);
+  leftToolbar->addWidget(nandButton);
 
   QAction *norAction = new QAction(this);
   norAction->setIcon(QIcon(":/icons/NORgate.png"));
@@ -174,7 +176,7 @@ MainWindow::MainWindow(QWidget *parent)
   norButton->setDefaultAction(norAction);
   norButton->setToolTip("NOR Gate");
   norButton->setFixedSize(96, 64);
-  toolbar->addWidget(norButton);
+  leftToolbar->addWidget(norButton);
 
   QAction *xorAction = new QAction(this);
   xorAction->setIcon(QIcon(":/icons/XORgate.png"));
@@ -182,7 +184,7 @@ MainWindow::MainWindow(QWidget *parent)
   xorButton->setDefaultAction(xorAction);
   xorButton->setToolTip("XOR Gate");
   xorButton->setFixedSize(96, 64);
-  toolbar->addWidget(xorButton);
+  leftToolbar->addWidget(xorButton);
 
   QAction *xnorAction = new QAction(this);
   xnorAction->setIcon(QIcon(":/icons/XNORgate.png"));
@@ -190,12 +192,12 @@ MainWindow::MainWindow(QWidget *parent)
   xnorButton->setDefaultAction(xnorAction);
   xnorButton->setToolTip("XNOR Gate");
   xnorButton->setFixedSize(96, 64);
-  toolbar->addWidget(xnorButton);
+  leftToolbar->addWidget(xnorButton);
 
   // QAction *pointAction = toolbar->addAction("Point");
   QLabel *connectionlabel = new QLabel("CONNECTION");
-  connectionlabel->setAlignment(Qt ::AlignCenter);
-  toolbar->addWidget(connectionlabel);
+  connectionlabel->setAlignment(Qt::AlignCenter);
+  leftToolbar->addWidget(connectionlabel);
   connectionlabel->setFont(font);
   connectionlabel->setStyleSheet("background-color: lightgray;");
 
@@ -205,29 +207,19 @@ MainWindow::MainWindow(QWidget *parent)
   wireButton->setDefaultAction(wireAction);
   wireButton->setToolTip("WIRE");
   wireButton->setFixedSize(96, 64);
-  toolbar->addWidget(wireButton);
+  leftToolbar->addWidget(wireButton);
+
+  // Right Toolbar: Inputs & Outputs
+  QToolBar *rightToolbar = new QToolBar("Inputs & Outputs", this);
+  rightToolbar->setObjectName("RightToolBar");
+  addToolBar(Qt::RightToolBarArea, rightToolbar);
+  rightToolbar->setIconSize(QSize(96, 64));
 
   QLabel *inputlabel = new QLabel("INPUT");
-  inputlabel->setAlignment(Qt ::AlignCenter);
-  toolbar->addWidget(inputlabel);
+  inputlabel->setAlignment(Qt::AlignCenter);
+  rightToolbar->addWidget(inputlabel);
   inputlabel->setFont(font);
   inputlabel->setStyleSheet("background-color: lightgray;");
-
-  QAction *gndAction = new QAction(this);
-  gndAction->setIcon(QIcon(":/icons/GNDip.png"));
-  QToolButton *gndButton = new QToolButton();
-  gndButton->setDefaultAction(gndAction);
-  gndButton->setToolTip("GND");
-  gndButton->setFixedSize(96, 64);
-  toolbar->addWidget(gndButton);
-
-  QAction *constantAction = new QAction(this);
-  constantAction->setIcon(QIcon(":/icons/CONST1ip.png"));
-  QToolButton *constantButton = new QToolButton();
-  constantButton->setDefaultAction(constantAction);
-  constantButton->setToolTip("CONSTANT 1");
-  constantButton->setFixedSize(96, 64);
-  toolbar->addWidget(constantButton);
 
   QAction *switchAction = new QAction(this);
   switchAction->setIcon(QIcon(":/icons/SWITCHip.png"));
@@ -235,11 +227,27 @@ MainWindow::MainWindow(QWidget *parent)
   switchButton->setDefaultAction(switchAction);
   switchButton->setToolTip("SWITCH");
   switchButton->setFixedSize(96, 64);
-  toolbar->addWidget(switchButton);
+  rightToolbar->addWidget(switchButton);
+
+  QAction *constantAction = new QAction(this);
+  constantAction->setIcon(QIcon(":/icons/CONST1ip.png"));
+  QToolButton *constantButton = new QToolButton();
+  constantButton->setDefaultAction(constantAction);
+  constantButton->setToolTip("CONSTANT 1");
+  constantButton->setFixedSize(96, 64);
+  rightToolbar->addWidget(constantButton);
+
+  QAction *gndAction = new QAction(this);
+  gndAction->setIcon(QIcon(":/icons/GNDip.png"));
+  QToolButton *gndButton = new QToolButton();
+  gndButton->setDefaultAction(gndAction);
+  gndButton->setToolTip("GND");
+  gndButton->setFixedSize(96, 64);
+  rightToolbar->addWidget(gndButton);
 
   QLabel *outputlabel = new QLabel("OUTPUT");
-  outputlabel->setAlignment(Qt ::AlignCenter);
-  toolbar->addWidget(outputlabel);
+  outputlabel->setAlignment(Qt::AlignCenter);
+  rightToolbar->addWidget(outputlabel);
   outputlabel->setFont(font);
   outputlabel->setStyleSheet("background-color: lightgray;");
 
@@ -249,7 +257,7 @@ MainWindow::MainWindow(QWidget *parent)
   ledButton->setDefaultAction(ledAction);
   ledButton->setToolTip("LED");
   ledButton->setFixedSize(96, 64);
-  toolbar->addWidget(ledButton);
+  rightToolbar->addWidget(ledButton);
 
   toolButtons[ElementType::AndGate] = andButton;
   toolButtons[ElementType::OrGate] = orButton;
@@ -264,10 +272,10 @@ MainWindow::MainWindow(QWidget *parent)
   toolButtons[ElementType::Switch] = switchButton;
   toolButtons[ElementType::LED] = ledButton;
 
-  // Simulation Section in left toolbar
+  // Simulation Section on right toolbar
   QLabel *simlabel = new QLabel("SIMULATION");
   simlabel->setAlignment(Qt::AlignCenter);
-  toolbar->addWidget(simlabel);
+  rightToolbar->addWidget(simlabel);
   simlabel->setFont(font);
   simlabel->setStyleSheet("background-color: lightgray;");
 
@@ -279,7 +287,7 @@ MainWindow::MainWindow(QWidget *parent)
       "bold; font-size: 11px; border-radius: 4px; border: 1px solid #1B5E20; }"
       "QPushButton:hover { background-color: #388E3C; }"
       "QPushButton:pressed { background-color: #1B5E20; }");
-  toolbar->addWidget(simButton);
+  rightToolbar->addWidget(simButton);
   connect(simButton, &QPushButton::clicked, this, &MainWindow::runSimulation);
 
   // Menu Bar: File Menu
