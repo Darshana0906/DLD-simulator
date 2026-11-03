@@ -166,11 +166,6 @@ void LED::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 }
 
 void LED::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  CircuitScene *cs = dynamic_cast<CircuitScene *>(scene());
-  if (cs && cs->isPlacementMode()) {
-    event->ignore();
-    return;
-  }
   QGraphicsItem::mousePressEvent(event);
 }
 

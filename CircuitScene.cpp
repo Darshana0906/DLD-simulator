@@ -462,9 +462,19 @@ void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent *event) {
                     return;
                 }
             }
-            emit sceneClicked(event->scenePos());
-            event->accept();
-            return;
+
+            // Check if user clicked an existing placed item on canvas (Gate, Switch, LED, Wire, SelectionBox, etc.).
+            // If so, act as a selector/mover instead of trying to place an overlapping component!
+            QGraphicsItem *hit = itemAt(event->scenePos(), QTransform());
+            if (hit) {
+                // Existing item clicked: fall through to normal select / move / interact handling below!
+            } else {
+                // Empty canvas clicked: act as item creator!
+                clearSelection();
+                emit sceneClicked(event->scenePos());
+                event->accept();
+                return;
+            }
         }
     }
 
@@ -573,8 +583,10 @@ void CircuitScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 
 void CircuitScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     QGraphicsScene::mouseReleaseEvent(event);
-    if (event->button() == Qt::LeftButton && !m_placementMode && !m_wireToolActive && !m_wireStartPoint) {
-        emit circuitModified();
+    if (event->button() == Qt::LeftButton && !m_wireToolActive && !m_wireStartPoint) {
+        if (!selectedItems().isEmpty()) {
+            emit circuitModified();
+        }
     }
 }
 

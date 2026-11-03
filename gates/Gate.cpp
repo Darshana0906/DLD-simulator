@@ -38,11 +38,6 @@ void Gate::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 }
 
 void Gate::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-  CircuitScene *cs = dynamic_cast<CircuitScene *>(scene());
-  if (cs && cs->isPlacementMode()) {
-    event->ignore();
-    return;
-  }
   QGraphicsItem::mousePressEvent(event);
 }
 
